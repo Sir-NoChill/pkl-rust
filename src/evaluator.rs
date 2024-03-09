@@ -4,7 +4,7 @@ pub mod decode_primitives;
 pub mod decoder;
 pub mod decode_slice;
 pub mod decode_struct;
-pub mod err;
+pub mod errors;
 pub mod evaluator_exec;
 pub mod evaluator_manager;
 pub mod evaluator_options;
