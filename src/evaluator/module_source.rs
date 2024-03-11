@@ -6,13 +6,21 @@ use url::Url;
 /// Represents a source for Pkl evaluation
 pub struct ModuleSource {
     /// The URI of the resource.
-    pub uri: Url,
+    uri: Url,
 
     /// The text contents of the resource, if any exists.
     ///
     /// If Contents is empty, it gets resolved by Pkl during evaluation time.
     /// If the scheme of the Uri matches a ModuleReader, it will be used to resolve the module.
-    pub contents: Option<String>,
+    contents: Option<String>,
+}
+
+impl ModuleSource {
+    /// Immutable access for the uri of a ModuleSource
+    fn uri(&self) -> &Url {return &self.uri;}
+
+    /// Immutable access for the contents of a ModuleSource
+    fn contents(&self) -> &Option<String> {return &self.contents}
 }
 
 /// Builds a ModuleSource from a file path
@@ -23,7 +31,7 @@ pub struct ModuleSource {
 /// use pkl_rust::evaluator::module_source::file_source;
 /// let source = file_source("test/file.pkl".into());
 ///
-/// assert_eq!(source.uri.scheme(), "file");
+/// assert_eq!(source.uri().scheme(), "file");
 /// // assert_eq!(source.uri.path(), "/home/$USER/$DIR/test/file.pkl");
 /// ```
 pub fn file_source(path: PathBuf) -> ModuleSource {
@@ -42,4 +50,15 @@ pub fn file_source(path: PathBuf) -> ModuleSource {
     let res = url_entry.join(url_string).expect("Failed to join to the rest of the path");
 
     return ModuleSource{uri: res, contents: None};
+}
+
+/// Builds a ModuleSource from a string input
+///
+/// # Example
+///
+/// ```
+///
+/// ```
+pub fn text_source(text: String) -> ModuleSource {
+
 }
