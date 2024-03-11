@@ -68,3 +68,17 @@ pub fn text_source(text: String) -> ModuleSource {
     //TODO this is also sloppy
     return ModuleSource{ uri: uri_entry, contents: Some(text), };
 }
+
+/// Builds a ModuleSource using the input uri
+/// # Example
+///
+/// ```
+/// use pkl_rust::evaluator::module_source::uri_source;
+/// use url::Url;
+///
+/// let pkl = uri_source(Url::parse("file:/test/pkl.pkl").unwrap());
+/// assert_eq!(pkl.uri().scheme(), "file");
+/// ```
+pub fn uri_source(uri: Url) -> ModuleSource {
+    return ModuleSource{ uri: uri, contents: None };
+}
