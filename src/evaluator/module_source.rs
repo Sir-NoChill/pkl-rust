@@ -17,10 +17,10 @@ pub struct ModuleSource {
 
 impl ModuleSource {
     /// Immutable access for the uri of a ModuleSource
-    fn uri(&self) -> &Url {return &self.uri;}
+    pub fn uri(&self) -> &Url {return &self.uri;}
 
     /// Immutable access for the contents of a ModuleSource
-    fn contents(&self) -> &Option<String> {return &self.contents}
+    pub fn contents(&self) -> &Option<String> {return &self.contents}
 }
 
 /// Builds a ModuleSource from a file path
@@ -36,6 +36,7 @@ impl ModuleSource {
 /// ```
 pub fn file_source(path: PathBuf) -> ModuleSource {
     let result: PathBuf;
+    //TODO fix, this is sloppy
     let url_entry = Url::parse_with_params("file:/", &[("scheme", "file")]).expect("Failed to convert path to uri");
 
     if !path.is_absolute() {
@@ -57,8 +58,13 @@ pub fn file_source(path: PathBuf) -> ModuleSource {
 /// # Example
 ///
 /// ```
+/// use pkl_rust::evaluator::module_source::text_source;
 ///
+/// let pkl = text_source("Attribute = 1".into());
+/// assert_eq!(pkl.uri().scheme(), "repl");
 /// ```
 pub fn text_source(text: String) -> ModuleSource {
-
+    let uri_entry = Url::parse("repl:/").expect("Failed to parse uri entry");
+    //TODO this is also sloppy
+    return ModuleSource{ uri: uri_entry, contents: Some(text), };
 }
