@@ -3,17 +3,13 @@ use std::collections::HashMap;
 
 use rmp_serde as rmps;
 
-use serde::{Serialize, Deserialize};
+use serde::Serialize;
 use rmps::Serializer;
-
-/// Trait required to pass messages to the pkl server.
-/// Note this must implement Serialize to work with rmps
-pub trait OutgoingMessage: Serialize {}
 
 /// Packs a message in messagepasing v5 format
 ///
 /// # Example
-pub fn pack_message(msg: &impl OutgoingMessage, code: u8) -> Result<Vec<u8>, &'static str> {
+pub fn pack_message(msg: &impl Serialize, code: u8) -> Result<Vec<u8>, &'static str> {
     let mut buf = Vec::new();
     let value = (code, msg);
 
@@ -21,29 +17,27 @@ pub fn pack_message(msg: &impl OutgoingMessage, code: u8) -> Result<Vec<u8>, &'s
     return Ok(buf);
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct ModuleReader {
     scheme: String,
     hasHierarchicalUris: bool,
     isGlobbable: bool,
     isLocal: bool,
 }
-impl OutgoingMessage for ModuleReader {}
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct ResourceReader {
     scheme: String,
     hasHierarchicalUris: bool,
     isGlobbable: bool,
 }
-impl OutgoingMessage for ResourceReader {}
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct Checksums {
     checksums: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct ProjectOrDependency {
     packageUri: Option<String>,
     r#type: String,
@@ -51,9 +45,8 @@ pub struct ProjectOrDependency {
     checksums: Option<Checksums>,
     dependencies: HashMap<String, ProjectOrDependency>,
 }
-impl OutgoingMessage for ProjectOrDependency {}
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct CreateEvaluator {
     requestId: i64,
     clientResourceReaders: Option<Vec<ResourceReader>>,
@@ -69,15 +62,13 @@ pub struct CreateEvaluator {
     project: Option<ProjectOrDependency>,
     timeoutSeconds: Option<i64>,
 }
-impl OutgoingMessage for CreateEvaluator {}
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct CloseEvaluator {
     evaluatorId: Option<i64>,
 }
-impl OutgoingMessage for CloseEvaluator {}
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct Evaluate {
     requestId: i64,
     evaluatorId: i64,
@@ -85,55 +76,49 @@ pub struct Evaluate {
     moduleText: Option<String>,
     expr: Option<String>,
 }
-impl OutgoingMessage for Evaluate {}
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct ReadResourceResponse {
     requestId: i64,
     evaluatorId: i64,
     contents: Option<Vec<u8>>,
     error: Option<String>,
 }
-impl OutgoingMessage for ReadResourceResponse {}
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct ReadModuleResponse {
     requestId: i64,
     evaluatorId: i64,
     contents: Option<String>,
     error: Option<String>,
 }
-impl OutgoingMessage for ReadModuleResponse {}
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PathElement {
-    name: String,
-    isDirectory: bool,
-}
-impl OutgoingMessage for PathElement {}
-
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct ListResourceResponse {
     requestId: i64,
     evaluatorId: i64,
     pathElements: Option<Vec<PathElement>>,
     error: Option<String>,
 }
-impl OutgoingMessage for ListResourceResponse {}
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct ListModulesResponse {
     requestId: i64,
     evaluatorId: i64,
     pathElements: Option<Vec<PathElement>>,
     error: Option<String>,
 }
-impl OutgoingMessage for ListModulesResponse {}
 
+#[derive(Debug, Serialize)]
+pub struct PathElement {
+    name: String,
+    isDirectory: bool,
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::evaluator::msg_api::code;
 
     #[test]
     fn test_pack_message_module_reader() {
@@ -160,16 +145,22 @@ mod tests {
     ///        "name": "foo.pkl",
     ///        "isDirectory": false
     ///      }
+    ///     "error": null  // note that this is the same as ommitting the element
     ///    ]
     ///   }
     /// ]
     fn test_pack_message_specification_1() {
         let pe = PathElement{name: "foo.pkl".into(), isDirectory: false};
-        let mr = ListModulesResponse{requestId: -647892, evaluatorId: -13901, pathElements: vec![pe], error: "".into()};
+        let mr = ListModulesResponse{requestId: -647892, evaluatorId: -13901, pathElements: vec![pe].into(), error: None};
 
         let mp = pack_message(&mr, code::CODE_LIST_MODULES_RESPONSE).unwrap();
+        let expected = vec![0x92, 0x2D, 0x84, 0xA9, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x64,
+                            0xD2, 0xFF, 0xF6, 0x1D, 0x2C, 0xAB, 0x65, 0x76, 0x61, 0x6C, 0x75, 0x61, 0x74,
+                            0x6F, 0x72, 0x49, 0x64, 0xD1, 0xC9, 0xB3, 0xAC, 0x70, 0x61, 0x74, 0x68, 0x45,
+                            0x6C, 0x65, 0x6D, 0x65, 0x6E, 0x74, 0x73, 0x91, 0x82, 0xA4, 0x6E, 0x61, 0x6D,
+                            0x65, 0xA7, 0x66, 0x6F, 0x6F, 0x2E, 0x70, 0x6B, 0x6C, 0xAB, 0x69, 0x73, 0x44,
+                            0x69, 0x72, 0x65, 0x63, 0x74, 0x6F, 0x72, 0x79, 0xC2, 0xA5, 0x65, 0x72, 0x72, 0x6F, 0x72, 0xC0];
 
-        let expected = vec![0x92, 0x2D, 0x83, 0xA9, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x64, 0xD2, 0xFF, 0x9D, 0x23, 0xB4, 0xAB, 0x65, 0x76, 0x61, 0x6C, 0x75, 0x61, 0x74, 0x6F, 0x72, 0x49, 0x64, 0xD1, 0xC9, 0xB3, 0xAC, 0x70, 0x61, 0x74, 0x68, 0x45, 0x6C, 0x65, 0x6D, 0x65, 0x6E, 0x74, 0x73, 0x91, 0x82, 0xA4, 0x6E, 0x61, 0x6D, 0x65, 0xA7, 0x66, 0x6F, 0x6F, 0x2E, 0x70, 0x6B, 0x6C, 0xAB, 0x69, 0x73, 0x44, 0x69, 0x72, 0x65, 0x63, 0x74, 0x6F, 0x72, 0x79, 0xC2];
         println!("Serialized: {:X?}", mp);
 
         assert_eq!(mp, expected);
