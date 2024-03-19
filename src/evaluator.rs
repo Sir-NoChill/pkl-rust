@@ -11,6 +11,7 @@ pub mod evaluator_options;
 pub mod evaluator;
 pub mod logger;
 pub mod module_source;
+pub mod msg_api;
 pub mod projects;
 pub mod reader;
 pub mod schema;
