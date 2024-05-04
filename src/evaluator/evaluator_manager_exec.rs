@@ -36,11 +36,10 @@ use super::msg_api::{incoming::*, outgoing::*, code::*};
 ///      user program
 ///```
 ///
-/// Inspiration taken from https://stackoverflow.com/questions/31576555/unable-to-pipe-to-or-from-spawned-child-process-more-than-once/31577297#31577297
 pub struct EvaluatorManagerExec {
     pub child_process: Child,
-    sender: Sender<Vec<u8>>,
-    receiver: Receiver<IncomingMessage>,
+    pub sender: Sender<Vec<u8>>,
+    pub receiver: Receiver<IncomingMessage>,
     closed: bool, //TODO this is a channel in the go implementation
     t_write: Option<JoinHandle<()>>,
     t_recv: Option<JoinHandle<()>>,
@@ -90,7 +89,7 @@ impl Default for EvaluatorManagerExec {
             pkl_command,
             child_process,
             t_write: Some(write_thread),
-            t_recv: Some(read_thread),
+            t_recv: None,//Some(read_thread),
         }
     }
 }
@@ -104,12 +103,22 @@ impl EvaluatorManagerExec {
         self.child_process.kill()
     }
 
-    fn senrec(&mut self, msg: &impl Serialize, t: OutgoingMessage) -> Result<IncomingMessage, RecvError> {
-        let message = pack_message(msg, t).expect("Failed to pack message");
+    //FIXME none of these methods work, so eliminating them
+    // fn senrec(&mut self, msg: &impl Serialize, t: OutgoingMessage) -> Result<IncomingMessage, RecvError> {
+    //     let message = pack_message(msg, t).expect("Failed to pack message");
 
-        self.sender.send(message).expect("Failed to send message");
-        self.receiver.recv()
-    }
+    //     self.sender.send(message).expect("Failed to send message");
+    //     self.receiver.recv()
+    // }
+
+    // fn send(&self, msg: &impl Serialize, t: OutgoingMessage) {
+    //     let message = pack_message(msg, t).expect("Could not determine message type, failed to serialize");
+    //     self.sender.send(message).expect("Failed to send message to pkl");
+    // }
+
+    // fn recv(&self) -> Result<IncomingMessage, RecvError> {
+    //     self.receiver.recv()
+    // }
 }
 
 impl Drop for EvaluatorManagerExec {
@@ -256,25 +265,70 @@ mod tests {
 
     #[test]
     fn test_async() {
-        let mut eval = EvaluatorManagerExec::default();
-        // Init the actual child process
-        let pkl_command = ["/home/stormblessed/software/pkl".to_string(), "server".to_string()];
-        let mut child_process = Command::new(pkl_command.first().expect("no pkl command given").to_string())
-                                .args(pkl_command.split_first().expect("pkl_command vector is empty!").1)
-                                .stdin(Stdio::piped())
-                                .stderr(Stdio::piped())
-                                .stdout(Stdio::inherit())
-                                .spawn()
-                                .expect("failed to spawn pkl server process");
+        let eval = EvaluatorManagerExec::default();
 
-        eval.child_process = child_process;
+        evaluator_send(&eval, &CREATE_EVAL, OutgoingMessage::CreateEvaluator);
 
-        let res = eval.senrec(&CREATE_EVAL, OutgoingMessage::CreateEvaluator);
+        let res = evaluator_recv(&eval);
         println!("Here: {:?}", res);
-
-        eval.deinit().expect("Failed to deinit");
-        println!("Here, deinit");
 
         println!("Result: {:?}", res.expect("Failed to get message"));
     }
+
+    fn init() -> (Sender<Vec<u8>>, Receiver<IncomingMessage>) {
+        let pkl_command = vec!["/home/stormblessed/software/pkl".to_string(), "server".to_string()];
+        // Init the actual child process
+        let mut child_process = Command::new(pkl_command.first().expect("no pkl command given").to_string())
+                                .args(pkl_command.split_first().expect("pkl_command vector is empty!").1)
+                                .stdin(Stdio::piped())
+                                .stdout(Stdio::piped())
+                                .stderr(Stdio::piped())
+                                .spawn()
+                                .expect("failed to spawn pkl server process");
+
+        // Get our channels for communicating values
+        let (sender, t_recv): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = channel();
+        let (t_send, receiver): (Sender<IncomingMessage>, Receiver<IncomingMessage>) = channel();
+
+        // Thread spawning
+        let child_in: ChildStdin = child_process.stdin.take().expect("Failed to open stdout");
+        let child_out: ChildStdout = child_process.stdout.take().expect("Failed to open stdin");
+
+        // Get our channels for communicating values
+        let (sender, t_recv): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = channel();
+        let (t_send, receiver): (Sender<IncomingMessage>, Receiver<IncomingMessage>) = channel();
+
+        spawn_read_thread(t_send, child_out);
+        spawn_write_thread(t_recv, child_in);
+
+        return (sender, receiver);
+
+    }
+
+    #[test]
+    fn test_manual() {
+
+        let (sender, receiver) = init();
+
+        let _ = sender.send(test1.to_vec());
+        let a = receiver.recv();
+        println!("Res: {:?}", a);
+
+    }
+
+    fn init_2() -> EvaluatorManagerExec {
+        let eval = EvaluatorManagerExec::default();
+        return eval;
+    }
+
+    #[test]
+    fn test_pub() {
+        let eval = EvaluatorManagerExec::default();
+
+        let _ = &eval.sender.send(test1.to_vec());
+        let a = &eval.receiver.recv();
+
+        println!("Result: {:?}", a);
+    }
+
 }
