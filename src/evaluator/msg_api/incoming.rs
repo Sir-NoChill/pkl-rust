@@ -5,21 +5,50 @@ use std::collections::HashMap;
 use rmp_serde as rmps;
 
 use rmps::from_slice;
-use serde::Deserialize;
+use serde::{Deserialize, de::{DeserializeOwned, Visitor, self}};
+
+use super::code::{CODE_NEW_EVALUATOR, CODE_EVALUATE_RESPONSE, CODE_EVALUATE_READ_MODULE, CODE_LIST_RESOURCES_RESPONSE, CODE_LIST_MODULES_RESPONSE, CODE_EVALUATE_LOG, CODE_LIST_MODULES_REQUEST};
 
 pub fn decode<T: for<'a> Deserialize<'a>>(msg: Vec<u8>) -> Result<(u8, T), &'static str> {
     return Ok(from_slice::<(u8, T)>(&msg).expect("Failed to deserialize"));
 }
 
+pub trait DeserializableMessage {
+    fn deserialize(reader: &mut dyn std::io::Read) -> Option<Self>
+    where
+        Self: Sized;
+}
+
+#[derive(Debug)]
+pub enum IncomingMessage {
+    CreateEvaluatorResponse(CreateEvaluatorResponse),
+    EvaluateResponse(EvaluateResponse),
+    ReadResource(ReadResource),
+    ReadModule(ReadModule),
+    ListResources(ListResources),
+    ListModules(ListModules),
+    Log(Log),
+}
+
 #[derive(Deserialize, Debug, Clone)]
-struct CreateEvaluatorResponse {
+pub struct CreateEvaluatorResponse {
     requestId: i64,
     evaluatorId: Option<i64>, // if None, then error is Some(errmsg)
     error: Option<String>,
 }
+impl DeserializableMessage for CreateEvaluatorResponse {
+    fn deserialize(reader: &mut dyn std::io::Read) -> Option<Self>
+    where
+        Self: Sized {
+        match rmp_serde::from_read(reader) {
+            Ok(msg) => Some(msg),
+            Err(_) => None,
+        }
+    }
+}
 
 #[derive(Deserialize, Debug, Clone)]
-struct EvaluateResponse {
+pub struct EvaluateResponse {
     requestId: i64,
     evaluatorId: i64,
     result: Option<Vec<u8>>,
@@ -28,35 +57,35 @@ struct EvaluateResponse {
 
 
 #[derive(Deserialize, Debug, Clone)]
-struct ReadResource {
+pub struct ReadResource {
     requestId: i64,
     evaluatorId: i64,
     uri: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-struct ReadModule {
+pub struct ReadModule {
     requestId: i64,
     evaluatorId: i64,
     uri: String
 }
 
 #[derive(Deserialize, Debug, Clone)]
-struct ListResources {
+pub struct ListResources {
     requestId: i64,
     evaluatorId: i64,
     uri: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-struct ListModules {
+pub struct ListModules {
     requestId: i64,
     evaluatorId: i64,
     uri: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-struct Log {
+pub struct Log {
     evaluatorId: i64,
     level: i8,
     message: String,

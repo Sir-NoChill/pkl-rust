@@ -80,5 +80,5 @@ pub fn text_source(text: String) -> ModuleSource {
 /// assert_eq!(pkl.uri().scheme(), "file");
 /// ```
 pub fn uri_source(uri: Url) -> ModuleSource {
-    return ModuleSource{ uri: uri, contents: None };
+    return ModuleSource{ uri, contents: None };
 }

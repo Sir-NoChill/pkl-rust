@@ -1,0 +1,15 @@
+@Unlisted
+
+import "Type.pkl"
+
+imports: List<String>
+
+abstract function render(rustPath: String): String
+
+class Pointer extends Type {
+  elem: Type
+
+  imports = elem.imports
+
+  function render(rustPath: String)
+}
