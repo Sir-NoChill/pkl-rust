@@ -37,14 +37,11 @@ use super::msg_api::{incoming::*, outgoing::*, code::*};
 ///```
 ///
 pub struct EvaluatorManagerExec {
-    pub child_process: Child,
+    child_process: Child,
     pub sender: Sender<Vec<u8>>,
     pub receiver: Receiver<IncomingMessage>,
     killer_recv: Sender<Vec<u8>>,
     killer_wrtr: Sender<Vec<u8>>,
-    closed: bool, //TODO this is a channel in the go implementation
-    t_write: Option<JoinHandle<()>>, // TODO don't know why we need both of these...
-    t_recv: Option<JoinHandle<()>>,
     pub version: String,
     pub pkl_command: Vec<String>,
 }
@@ -82,11 +79,10 @@ impl Default for EvaluatorManagerExec {
         // Thread spawning
         let child_in: ChildStdin = child_process.stdin.take().expect("Failed to open stdout");
         let child_out: ChildStdout = child_process.stdout.take().expect("Failed to open stdin");
-        let write_thread = spawn_write_thread(t_recv, kill_recv_w, child_in);
-        let read_thread = spawn_read_thread(t_send, kill_recv_r, child_out);
+        let _ = spawn_write_thread(t_recv, kill_recv_w, child_in);
+        let _ = spawn_read_thread(t_send, kill_recv_r, child_out);
 
         Self {
-            closed: false,
             version,
             sender,
             receiver,
@@ -94,8 +90,6 @@ impl Default for EvaluatorManagerExec {
             killer_wrtr: kill_sender_w,
             pkl_command,
             child_process,
-            t_write: Some(write_thread),
-            t_recv: None,//Some(read_thread),
         }
     }
 }
@@ -104,31 +98,18 @@ impl EvaluatorManagerExec {
     /// Internal method to kill the evaluator
     fn deinit(&mut self) -> Result<(), std::io::Error> {
         //TODO this should also be logged
-        thread::sleep(Duration::from_millis(10));
-        println!("Sendin kill signals");
         self.killer_recv.send(vec![0xff, 0xff]).expect("Failed to send kill signal to pkl reader");
         self.killer_wrtr.send(vec![0xff, 0xff]).expect("Failed to send kill signal to pkl writer");
-
-        println!("Sent kill signals");
-        match self.t_recv.take() {
-            None => println!("Receiver is dead"),
-            Some(x) => x.join().expect("Failed to join receiver"),
-        }
-
-        match self.t_write.take() {
-            None => println!("Writer is dead"),
-            Some(x) => println!("Failed to join sender"),
-            // Some(x) => x.join().expect("Failed to join sender"), //FIXME currently failing to join the thread
-        }
 
         self.child_process.kill()
     }
 
     //FIXME none of these methods work, so eliminating them
-    // fn senrec(&mut self, msg: &impl Serialize, t: OutgoingMessage) -> Result<IncomingMessage, RecvError> {
+    // fn send_and_rec(&mut self, msg: &impl Serialize, t: OutgoingMessage) -> Result<IncomingMessage, RecvError> {
     //     let message = pack_message(msg, t).expect("Failed to pack message");
 
     //     self.sender.send(message).expect("Failed to send message");
+    //     thread::sleep(Duration::from_millis(10));
     //     self.receiver.recv()
     // }
 
@@ -152,27 +133,18 @@ fn spawn_write_thread(recv: Receiver<Vec<u8>>, kill_recv: Receiver<Vec<u8>>, chi
     thread::spawn(move || {
         let mut writer = BufWriter::new(child_in); // Need the stream in order to write
         let mut message: Vec<u8>;
-        let mut now = Instant::now();
         loop {
             match kill_recv.recv_timeout(Duration::from_millis(10)) {
                 Err(x) => println!("No message (s): {:?}", x),
                 Ok(..) => {
-                    println!("Received message");
+                    println!("Received kill message (s)");
                     break;
                 },
             }
 
             match recv.recv() {
-                Ok(x) => {
-                    message = x;
-                    // now = Instant::now(); // FIXME see below
-                },
-                Err(..) => {
-                    if now.elapsed().as_secs() > 4 { break; } // FIXME
-                    // the sender currently fails to receive the kill messages, so
-                    // I kill based on the amount of time spent idle
-                    continue;
-                }, // This is our key to looping forever
+                Ok(x) => message = x,
+                Err(..) => continue,
             }
 
             match writer.write_all(&message) {
@@ -197,7 +169,7 @@ fn spawn_read_thread<'f>(send: Sender<IncomingMessage>, recv: Receiver<Vec<u8>>,
             match recv.recv_timeout(Duration::from_millis(100)) {
                 Err(x) => println!("No message (r): {:?}", x),
                 Ok(..) => {
-                    println!("Received message");
+                    println!("Received kill message (r)");
                     break;
                 },
             }
@@ -271,11 +243,8 @@ fn spawn_read_thread<'f>(send: Sender<IncomingMessage>, recv: Receiver<Vec<u8>>,
 
 #[cfg(test)]
 mod tests {
-    use std::{process::Stdio, io::{Write, BufReader, BufRead, Read, BufWriter}, ops::Index, thread, iter::once_with};
-    use rmp_serde as rmps;
-    use serde::{Deserialize, de::Unexpected};
+    use std::process::Stdio;
 
-    use crate::evaluator::msg_api::{incoming::{CreateEvaluatorResponse, DeserializableMessage, EvaluateResponse, ReadResource, ReadModule}, code::{CODE_CLOSE_EVALUATOR, CODE_NEW_EVALUATOR, CODE_NEW_EVALUATOR_RESPONSE}};
 
     use super::*;
     const test1: [u8; 139] = [0x92, 0x20, 0x83, 0xA9, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73,
@@ -309,69 +278,9 @@ mod tests {
         timeoutSeconds: None,
     };
 
-
-    #[test]
-    fn test_async() {
-        let eval = EvaluatorManagerExec::default();
-
-        // evaluator_send(&eval, &CREATE_EVAL, OutgoingMessage::CreateEvaluator);
-
-        // let res = evaluator_recv(&eval);
-        // println!("Here: {:?}", res);
-
-        // println!("Result: {:?}", res.expect("Failed to get message"));
-    }
-
-    fn init() -> (Sender<Vec<u8>>, Receiver<IncomingMessage>) {
-        let pkl_command = vec!["/home/stormblessed/software/pkl".to_string(), "server".to_string()];
-        // Init the actual child process
-        let mut child_process = Command::new(pkl_command.first().expect("no pkl command given").to_string())
-                                .args(pkl_command.split_first().expect("pkl_command vector is empty!").1)
-                                .stdin(Stdio::piped())
-                                .stdout(Stdio::piped())
-                                .stderr(Stdio::piped())
-                                .spawn()
-                                .expect("failed to spawn pkl server process");
-
-        // Get our channels for communicating values
-        let (sender, t_recv): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = channel();
-        let (t_send, receiver): (Sender<IncomingMessage>, Receiver<IncomingMessage>) = channel();
-
-        // Thread spawning
-        let child_in: ChildStdin = child_process.stdin.take().expect("Failed to open stdout");
-        let child_out: ChildStdout = child_process.stdout.take().expect("Failed to open stdin");
-
-        // Get our channels for communicating values
-        let (sender, t_recv): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = channel();
-        let (kill_sender, kill_recv): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = channel();
-        let (t_send, receiver): (Sender<IncomingMessage>, Receiver<IncomingMessage>) = channel();
-
-        // spawn_read_thread(t_send, kill_recv, child_out);
-        // spawn_write_thread(t_recv, child_in);
-
-        return (sender, receiver);
-
-    }
-
-    #[test]
-    fn test_manual() {
-
-        let (sender, receiver) = init();
-
-        let _ = sender.send(test1.to_vec());
-        let a = receiver.recv();
-        println!("Res: {:?}", a);
-
-    }
-
-    fn init_2() -> EvaluatorManagerExec {
-        let eval = EvaluatorManagerExec::default();
-        return eval;
-    }
-
     #[test]
     fn test_pub() {
-        let eval = EvaluatorManagerExec::default();
+        let mut eval = EvaluatorManagerExec::default();
 
         let _ = &eval.sender.send(test1.to_vec());
         let a = &eval.receiver.recv();
