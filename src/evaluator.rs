@@ -7,6 +7,7 @@ pub mod decode_struct;
 pub mod errors;
 pub mod evaluator_exec;
 pub mod evaluator_manager;
+pub mod evaluator_manager_exec;
 pub mod evaluator_options;
 pub mod evaluator;
 pub mod logger;

@@ -6,15 +6,40 @@ use rmp_serde as rmps;
 use serde::Serialize;
 use rmps::Serializer;
 
+use super::code::{CODE_NEW_EVALUATOR, CODE_NEW_EVALUATOR_RESPONSE, CODE_CLOSE_EVALUATOR, CODE_EVALUATE, CODE_EVALUATE_RESPONSE, CODE_EVALUATE_READ_RESPONSE, CODE_EVALUATE_READ_MODULE_RESPONSE, CODE_LIST_RESOURCES_RESPONSE, CODE_LIST_MODULES_REQUEST};
+
 /// Packs a message in messagepasing v5 format
 ///
 /// # Example
-pub fn pack_message(msg: &impl Serialize, code: u8) -> Result<Vec<u8>, &'static str> {
+pub fn pack_message(msg: &impl Serialize, t: OutgoingMessage) -> Result<Vec<u8>, &'static str> {
     let mut buf = Vec::new();
+    let code = get_code(t).0;
     let value = (code, msg);
 
     let _ = &value.serialize(&mut Serializer::new(&mut buf).with_struct_map()).unwrap();
     return Ok(buf);
+}
+
+fn get_code(t: OutgoingMessage) -> (u8, Option<u8>) {
+    match t {
+        OutgoingMessage::CreateEvaluator => (CODE_NEW_EVALUATOR, Some(CODE_NEW_EVALUATOR_RESPONSE)),
+        OutgoingMessage::CloseEvaluator => (CODE_CLOSE_EVALUATOR, None),
+        OutgoingMessage::Evaluate => (CODE_EVALUATE, Some(CODE_EVALUATE_RESPONSE)),
+        OutgoingMessage::ReadResourceResponse => (CODE_EVALUATE_READ_RESPONSE, None),
+        OutgoingMessage::ReadModuleResponse => (CODE_EVALUATE_READ_MODULE_RESPONSE, None),
+        OutgoingMessage::ListResourceResponse => (CODE_LIST_RESOURCES_RESPONSE, None),
+        OutgoingMessage::ListModulesResponse => (CODE_LIST_MODULES_REQUEST, None),
+    }
+}
+
+pub enum OutgoingMessage {
+    CreateEvaluator,
+    CloseEvaluator,
+    Evaluate,
+    ReadResourceResponse,
+    ReadModuleResponse,
+    ListResourceResponse,
+    ListModulesResponse,
 }
 
 #[derive(Debug, Serialize)]
@@ -48,19 +73,19 @@ pub struct ProjectOrDependency {
 
 #[derive(Debug, Serialize)]
 pub struct CreateEvaluator {
-    requestId: i64,
-    clientResourceReaders: Option<Vec<ResourceReader>>,
-    clientModuleReaders: Option<Vec<ModuleReader>>,
-    modulePaths: Option<Vec<String>>,
-    env: Option<HashMap<String, String>>,
-    properties: Option<HashMap<String, String>>,
-    outputFormat: Option<String>,
-    allowedModules: Option<Vec<String>>,
-    allowedResources: Option<Vec<String>>,
-    rootDir: Option<String>,
-    cacheDir: Option<String>,
-    project: Option<ProjectOrDependency>,
-    timeoutSeconds: Option<i64>,
+    pub requestId: i64,
+    pub clientResourceReaders: Option<Vec<ResourceReader>>,
+    pub clientModuleReaders: Option<Vec<ModuleReader>>,
+    pub modulePaths: Option<Vec<String>>,
+    pub env: Option<HashMap<String, String>>,
+    pub properties: Option<HashMap<String, String>>,
+    pub outputFormat: Option<String>,
+    pub allowedModules: Option<Vec<String>>,
+    pub allowedResources: Option<Vec<String>>,
+    pub rootDir: Option<String>,
+    pub cacheDir: Option<String>,
+    pub project: Option<ProjectOrDependency>,
+    pub timeoutSeconds: Option<i64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -70,11 +95,11 @@ pub struct CloseEvaluator {
 
 #[derive(Debug, Serialize)]
 pub struct Evaluate {
-    requestId: i64,
-    evaluatorId: i64,
-    moduleUri: String,
-    moduleText: Option<String>,
-    expr: Option<String>,
+    pub requestId: i64,
+    pub evaluatorId: i64,
+    pub moduleUri: String,
+    pub moduleText: Option<String>,
+    pub expr: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -123,7 +148,7 @@ mod tests {
     #[test]
     fn test_pack_message_module_reader() {
         let mr = ModuleReader{scheme: "customfs".into(), hasHierarchicalUris: true, isGlobbable: true, isLocal: false };
-        let msp = pack_message(&mr, 0x20).unwrap();
+        let msp = pack_message(&mr, OutgoingMessage::ListModulesResponse).unwrap();
 
         let expected = vec![0x92, 0x20, 0x84, 0xA6, 0x73, 0x63, 0x68, 0x65, 0x6D, 0x65, 0xA8, 0x63, 0x75, 0x73, 0x74,
                             0x6F, 0x6D, 0x66, 0x73, 0xB3, 0x68, 0x61, 0x73, 0x48, 0x69, 0x65, 0x72, 0x61, 0x72, 0x63,
@@ -153,7 +178,7 @@ mod tests {
         let pe = PathElement{name: "foo.pkl".into(), isDirectory: false};
         let mr = ListModulesResponse{requestId: -647892, evaluatorId: -13901, pathElements: vec![pe].into(), error: None};
 
-        let mp = pack_message(&mr, code::CODE_LIST_MODULES_RESPONSE).unwrap();
+        let mp = pack_message(&mr, OutgoingMessage::ListModulesResponse).unwrap();
         let expected = vec![0x92, 0x2D, 0x84, 0xA9, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x64,
                             0xD2, 0xFF, 0xF6, 0x1D, 0x2C, 0xAB, 0x65, 0x76, 0x61, 0x6C, 0x75, 0x61, 0x74,
                             0x6F, 0x72, 0x49, 0x64, 0xD1, 0xC9, 0xB3, 0xAC, 0x70, 0x61, 0x74, 0x68, 0x45,

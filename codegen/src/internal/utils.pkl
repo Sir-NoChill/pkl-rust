@@ -1,0 +1,90 @@
+@Unlisted
+
+import "pkl:reflect"
+
+local escaper = (c: Char) ->
+  if (c == "\n") #"\n"#
+  else if (c == "\"") #"\""#
+  else if (c == #"\"#) #"\\"#
+  else c
+
+/// Turn a Pkl string into a Rust string literal
+///
+/// Renders a raw string literal if the incoming string is multiline
+///  or contains quotes.
+///
+/// For this application, we only need to escape newlines and
+///  backslashes, however additional hex characters might be desired
+///  in a later release (source)[https://doc.rust-lang.org/rust-by-example/std/str.html]
+function toRustString(str: String): String =
+  if ((str.contains("\n") || str.contains("\"")) && !str.contains("`")) "`" + str + "`"
+  else "\"" + str.chars.map(escaper).join("") + "\""
+
+/// Converts a Pkl declaration to the correct Rust name
+///  unless explicitly marked with `@rust.Name` annotation
+///
+/// Normalization rules: https://rust-lang.github.io/api-guidelines/naming.html
+function toRustName(source: reflect.Declaration): String =
+  source
+    .annotations
+    .findOrNull((it) -> it.getClass().toString() == "pkl.rustlang.rust#Name")
+    ?.value
+  ??
+  normalizeName(source.name)
+
+keywords: List<String> = List(
+  "as",
+  "break",
+  "const",
+  "continue",
+  "crate",
+  "else",
+  "enum",
+  "extern",
+  "false",
+  "fn",
+  "for",
+  "if",
+  "impl",
+  "in",
+  "let",
+  "loop",
+  "match",
+  "mod",
+  "move",
+  "mut",
+  "pub",
+  "ref",
+  "return",
+  "self",
+  "Self",
+  "static",
+  "struct",
+  "super",
+  "trait",
+  "true",
+  "type",
+  "unsafe",
+  "use",
+  "where",
+  "while",
+  "async",
+  "await",
+  "dyn",
+  "abstract",
+  "become",
+  "box",
+  "do",
+  "final",
+  "macro",
+  "override",
+  "priv",
+  "typeof",
+  "unsized",
+  "virtual",
+  "yield",
+  "try",
+  "macro_rules",
+  "union",
+  "'static",
+)
