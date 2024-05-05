@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::Path, borrow::Cow};
+use std::{collections::HashMap, path::{Path, PathBuf}, rc::Rc};
 use dirs::home_dir;
 use std::env;
 
@@ -24,7 +24,7 @@ pub struct EvaluatorOptions {
 
     module_readers: Vec<ModuleReader>,
 
-    cache_dir: Path,
+    cache_dir: PathBuf,
 
     root_dir: String, //TODO this should also be a path
 

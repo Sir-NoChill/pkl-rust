@@ -14,7 +14,7 @@ pub struct EvaluatorManager {
     initialized: bool,
 }
 
-impl EvaluatorManager<'_> {
+impl EvaluatorManager {
     fn close() -> Result<&'static str, &'static str> {
         todo!()
     }
@@ -23,11 +23,11 @@ impl EvaluatorManager<'_> {
         todo!()
     }
 
-    fn new_evaluator<'a>() -> Result<Evaluator<'a>, &'static str> {
+    fn new_evaluator<'a>() -> Result<Evaluator, &'static str> {
         todo!()
     }
 
-    fn new_project_evaluator<'a>() -> Result<Evaluator<'a>, &'static str> {
+    fn new_project_evaluator<'a>() -> Result<Evaluator, &'static str> {
         todo!()
     }
 }

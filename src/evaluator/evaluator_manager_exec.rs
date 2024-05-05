@@ -1,4 +1,4 @@
-use std::{process::{Command, Child, Stdio, ChildStdin, ChildStdout}, sync::{mpsc::{Sender, Receiver, channel, RecvError}, atomic::AtomicBool}, os::unix::process::CommandExt, io::{Write, BufReader, BufWriter, Read}, cmp::Reverse, thread::{self, JoinHandle}, time::Duration};
+use std::{process::{Command, Child, Stdio, ChildStdin, ChildStdout}, sync::{mpsc::{Sender, Receiver, channel, RecvError}, atomic::AtomicBool}, os::unix::process::CommandExt, io::{Write, BufReader, BufWriter, Read}, cmp::Reverse, thread::{self, JoinHandle}, time::{Duration, Instant}};
 
 use serde::Serialize;
 
@@ -40,8 +40,10 @@ pub struct EvaluatorManagerExec {
     pub child_process: Child,
     pub sender: Sender<Vec<u8>>,
     pub receiver: Receiver<IncomingMessage>,
+    killer_recv: Sender<Vec<u8>>,
+    killer_wrtr: Sender<Vec<u8>>,
     closed: bool, //TODO this is a channel in the go implementation
-    t_write: Option<JoinHandle<()>>,
+    t_write: Option<JoinHandle<()>>, // TODO don't know why we need both of these...
     t_recv: Option<JoinHandle<()>>,
     pub version: String,
     pub pkl_command: Vec<String>,
@@ -73,19 +75,23 @@ impl Default for EvaluatorManagerExec {
 
         // Get our channels for communicating values
         let (sender, t_recv): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = channel();
+        let (kill_sender_r, kill_recv_r): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = channel();
+        let (kill_sender_w, kill_recv_w): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = channel();
         let (t_send, receiver): (Sender<IncomingMessage>, Receiver<IncomingMessage>) = channel();
 
         // Thread spawning
         let child_in: ChildStdin = child_process.stdin.take().expect("Failed to open stdout");
         let child_out: ChildStdout = child_process.stdout.take().expect("Failed to open stdin");
-        let write_thread = spawn_write_thread(t_recv, child_in);
-        let read_thread = spawn_read_thread(t_send, child_out);
+        let write_thread = spawn_write_thread(t_recv, kill_recv_w, child_in);
+        let read_thread = spawn_read_thread(t_send, kill_recv_r, child_out);
 
         Self {
             closed: false,
             version,
             sender,
             receiver,
+            killer_recv: kill_sender_r,
+            killer_wrtr: kill_sender_w,
             pkl_command,
             child_process,
             t_write: Some(write_thread),
@@ -98,8 +104,23 @@ impl EvaluatorManagerExec {
     /// Internal method to kill the evaluator
     fn deinit(&mut self) -> Result<(), std::io::Error> {
         //TODO this should also be logged
-        self.t_recv.take().map(JoinHandle::join);
-        self.t_write.take().map(JoinHandle::join);
+        thread::sleep(Duration::from_millis(10));
+        println!("Sendin kill signals");
+        self.killer_recv.send(vec![0xff, 0xff]).expect("Failed to send kill signal to pkl reader");
+        self.killer_wrtr.send(vec![0xff, 0xff]).expect("Failed to send kill signal to pkl writer");
+
+        println!("Sent kill signals");
+        match self.t_recv.take() {
+            None => println!("Receiver is dead"),
+            Some(x) => x.join().expect("Failed to join receiver"),
+        }
+
+        match self.t_write.take() {
+            None => println!("Writer is dead"),
+            Some(x) => println!("Failed to join sender"),
+            // Some(x) => x.join().expect("Failed to join sender"), //FIXME currently failing to join the thread
+        }
+
         self.child_process.kill()
     }
 
@@ -127,15 +148,33 @@ impl Drop for EvaluatorManagerExec {
     }
 }
 
-fn spawn_write_thread(recv: Receiver<Vec<u8>>, child_in: ChildStdin) -> JoinHandle<()> {
+fn spawn_write_thread(recv: Receiver<Vec<u8>>, kill_recv: Receiver<Vec<u8>>, child_in: ChildStdin) -> JoinHandle<()> {
     thread::spawn(move || {
         let mut writer = BufWriter::new(child_in); // Need the stream in order to write
         let mut message: Vec<u8>;
+        let mut now = Instant::now();
         loop {
-            match recv.recv() {
-                Ok(x) => message = x,
-                Err(..) => continue, // This is our key to looping forever
+            match kill_recv.recv_timeout(Duration::from_millis(10)) {
+                Err(x) => println!("No message (s): {:?}", x),
+                Ok(..) => {
+                    println!("Received message");
+                    break;
+                },
             }
+
+            match recv.recv() {
+                Ok(x) => {
+                    message = x;
+                    // now = Instant::now(); // FIXME see below
+                },
+                Err(..) => {
+                    if now.elapsed().as_secs() > 4 { break; } // FIXME
+                    // the sender currently fails to receive the kill messages, so
+                    // I kill based on the amount of time spent idle
+                    continue;
+                }, // This is our key to looping forever
+            }
+
             match writer.write_all(&message) {
                 Ok(_) => {
                     if let Err(err) = writer.flush() {
@@ -149,12 +188,20 @@ fn spawn_write_thread(recv: Receiver<Vec<u8>>, child_in: ChildStdin) -> JoinHand
     })
 }
 
-fn spawn_read_thread<'f>(send: Sender<IncomingMessage>, child_out: ChildStdout) -> JoinHandle<()> {
+fn spawn_read_thread<'f>(send: Sender<IncomingMessage>, recv: Receiver<Vec<u8>>, child_out: ChildStdout) -> JoinHandle<()> {
     thread::spawn(move || {
         let mut reader = BufReader::new(child_out); //TODO the raw pointer is kind of inelegant
         let mut byte_prefix = [0u8; 2];
 
         loop {
+            match recv.recv_timeout(Duration::from_millis(100)) {
+                Err(x) => println!("No message (r): {:?}", x),
+                Ok(..) => {
+                    println!("Received message");
+                    break;
+                },
+            }
+
             match reader.read_exact(&mut byte_prefix) {
                 Ok(..) => thread::sleep(Duration::from_millis(100)),
                 Err(..) => {
@@ -267,12 +314,12 @@ mod tests {
     fn test_async() {
         let eval = EvaluatorManagerExec::default();
 
-        evaluator_send(&eval, &CREATE_EVAL, OutgoingMessage::CreateEvaluator);
+        // evaluator_send(&eval, &CREATE_EVAL, OutgoingMessage::CreateEvaluator);
 
-        let res = evaluator_recv(&eval);
-        println!("Here: {:?}", res);
+        // let res = evaluator_recv(&eval);
+        // println!("Here: {:?}", res);
 
-        println!("Result: {:?}", res.expect("Failed to get message"));
+        // println!("Result: {:?}", res.expect("Failed to get message"));
     }
 
     fn init() -> (Sender<Vec<u8>>, Receiver<IncomingMessage>) {
@@ -296,10 +343,11 @@ mod tests {
 
         // Get our channels for communicating values
         let (sender, t_recv): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = channel();
+        let (kill_sender, kill_recv): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = channel();
         let (t_send, receiver): (Sender<IncomingMessage>, Receiver<IncomingMessage>) = channel();
 
-        spawn_read_thread(t_send, child_out);
-        spawn_write_thread(t_recv, child_in);
+        // spawn_read_thread(t_send, kill_recv, child_out);
+        // spawn_write_thread(t_recv, child_in);
 
         return (sender, receiver);
 
@@ -327,8 +375,19 @@ mod tests {
 
         let _ = &eval.sender.send(test1.to_vec());
         let a = &eval.receiver.recv();
-
         println!("Result: {:?}", a);
+
+        let _ = &eval.sender.send(test1.to_vec());
+        let a = &eval.receiver.recv();
+        println!("Result: {:?}", a);
+
+        let _ = &eval.sender.send(test1.to_vec());
+        let a = &eval.receiver.recv();
+        println!("Result: {:?}", a);
+
+        let _ = &eval.sender.send(test1.to_vec());
+        let a = &eval.receiver.recv();
+        println!("Last one: {:?}", a);
     }
 
 }

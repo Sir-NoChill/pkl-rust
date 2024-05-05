@@ -30,7 +30,7 @@ pub trait EvaluatorMethods { // NOTE this allows for other types of evaluators, 
     fn closed(&self, ) -> bool;
 }
 
-impl EvaluatorMethods for Evaluator<'_> {
+impl EvaluatorMethods for Evaluator {
     fn evaluate_module<T>(&self, source: &ModuleSource) -> Result<T, &'static str> {
         return self.evaluate_expression(source, None);
     }
