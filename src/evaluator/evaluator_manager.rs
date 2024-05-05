@@ -5,13 +5,12 @@ use super::{msg_api::{incoming, outgoing}, evaluator_manager_exec::EvaluatorMana
 
 
 #[derive(Default)]
-pub struct EvaluatorManager<'a> {
-    interrupts: Mutex<HashMap<Sender<OutgoingMessage>, i64>>, // TODO https://docs.rs/async-map/latest/async_map/ ??
-    evaluators: Mutex<Vec<Evaluator<'a>>>,
-    pending_evaluators: Mutex<Vec<Evaluator<'a>>>,
-    exec: Vec<EvaluatorManagerExec>,
+pub struct EvaluatorManager {
+    // interrupts: Mutex<HashMap<Sender<OutgoingMessage>, i64>>, // TODO https://docs.rs/async-map/latest/async_map/ ??
+    evaluators: Evaluator,
+    pending_evaluators: Evaluator,
+    exec: EvaluatorManagerExec,
     closed: AtomicBool,
-    new_evaluator_mutex: Mutex<u8>,
     initialized: bool,
 }
 

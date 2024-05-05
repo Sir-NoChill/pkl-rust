@@ -5,7 +5,7 @@ use std::env;
 use super::{msg_api::outgoing::{ResourceReader, ModuleReader}, logger::Logger};
 
 //TODO documentation
-pub struct EvaluatorOptions<'a> {
+pub struct EvaluatorOptions {
     properties: HashMap<String, String>,
 
     env: HashMap<String, String>,
@@ -24,7 +24,7 @@ pub struct EvaluatorOptions<'a> {
 
     module_readers: Vec<ModuleReader>,
 
-    cache_dir: Cow<'a, Path>,
+    cache_dir: Path,
 
     root_dir: String, //TODO this should also be a path
 
@@ -37,7 +37,7 @@ macro_rules! vec_of_strings {
     ($($x:expr),*) => (vec![$($x.to_string()),*]);
 }
 
-impl<'a> Default for EvaluatorOptions<'a> {
+impl Default for EvaluatorOptions {
     fn default() -> Self {
         let allowed_resources: Vec<String> = vec_of_strings!["http:", "https:", "file:",
                                                      "env:", "prop:", "modulepath:",
@@ -45,7 +45,7 @@ impl<'a> Default for EvaluatorOptions<'a> {
         let allowed_modules: Vec<String> = vec_of_strings!["pkl:", "repl:", "file:", "http:",
                                                    "https:", "modulepath:", "package:",
                                                    "projectpackage:"];
-        let mut dirname = home_dir().expect("No home directory found.");
+        let mut dirname = home_dir().expect("No home directory found!");
         dirname.push("/.pkl/cache");
 
         let mut os_env: HashMap<String, String> = Default::default();
@@ -65,7 +65,7 @@ impl<'a> Default for EvaluatorOptions<'a> {
             allowed_resources,
             resource_readers: Default::default(),
             module_readers: Default::default(),
-            cache_dir: Cow::from(dirname),
+            cache_dir: dirname,
             root_dir: Default::default(),
             project_dir: Default::default(),
             declared_project_dependency: Default::default(),

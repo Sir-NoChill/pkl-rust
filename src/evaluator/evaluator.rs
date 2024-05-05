@@ -6,15 +6,15 @@ use super::{msg_api::{outgoing::{ResourceReader, ModuleReader, Evaluate}, incomi
 
 // Interface for evaluating pkl modules
 #[derive(Default)]
-pub struct Evaluator<'a> { // NOTE the lifetime allows us to ignore close() since at the end of the lifetime the Evaluator is killed automatically
+pub struct Evaluator { // NOTE the lifetime allows us to ignore close() since at the end of the lifetime the Evaluator is killed automatically
     evaluator_id: i64,
     logger: Logger,
-    manager: Rc<EvaluatorManager<'a>>,
+    manager: Rc<EvaluatorManager>,
     pending_requests: HashMap<i64, Sender<EvaluateResponse>>,
     closed: bool,
     resource_readers: Vec<ResourceReader>,
     module_readers: Vec<ModuleReader>,
-    opts: EvaluatorOptions<'a>,
+    opts: EvaluatorOptions,
 }
 
 // TODO the `out` field should be replaced with some sort of
