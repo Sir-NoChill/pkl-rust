@@ -5,16 +5,30 @@ use crate::evaluator::msg_api::incoming::IncomingMessage;
 use super::{msg_api::{outgoing::{ResourceReader, ModuleReader, Evaluate}, incoming::EvaluateResponse}, module_source::ModuleSource, logger::Logger, evaluator_options::EvaluatorOptions, evaluator_manager::EvaluatorManager};
 
 // Interface for evaluating pkl modules
-#[derive(Default)]
 pub struct Evaluator { // NOTE the lifetime allows us to ignore close() since at the end of the lifetime the Evaluator is killed automatically
-    evaluator_id: i64,
-    logger: Logger,
-    manager: Rc<EvaluatorManager>,
-    pending_requests: HashMap<i64, Sender<EvaluateResponse>>,
-    closed: bool,
-    resource_readers: Vec<ResourceReader>,
-    module_readers: Vec<ModuleReader>,
-    opts: EvaluatorOptions,
+    pub evaluator_id: i64,
+    pub logger: Logger,
+    // pub manager: Option<Rc<&EvaluatorManager>>, //TODO fix the bidirectional reference
+    pub pending_requests: HashMap<i64, Sender<EvaluateResponse>>,
+    pub closed: bool,
+    pub resource_readers: Vec<ResourceReader>,
+    pub module_readers: Vec<ModuleReader>,
+    pub opts: EvaluatorOptions,
+}
+
+impl Default for Evaluator {
+    fn default() -> Self {
+        Self {
+            evaluator_id: rand::random(),
+            logger: Default::default(),
+            // manager: Default::default(),
+            pending_requests: Default::default(),
+            closed: Default::default(),
+            resource_readers: Default::default(),
+            module_readers: Default::default(),
+            opts: Default::default()
+        }
+    }
 }
 
 // TODO the `out` field should be replaced with some sort of

@@ -1,7 +1,13 @@
 [package]
-name = "pkl-rust-gen"
-version = "0.1.0"
+name = "pkl-rust"
+version = "0.0.1"
 edition = "2021"
+authors = ["Ayrton Chilibeck <pkl@blobfish.icu>"]
+repository = "https://github.com/Sir-NoChill/pkl-rust"
+homepage = "https://pkl-lang.org"
+readme = "README.md"
+keywords = ["configuration", "codegen"]
+categories = ["config"]
 
 [dependencies]
 dirs = "5.0.1"

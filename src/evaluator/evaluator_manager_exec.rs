@@ -30,7 +30,7 @@ use super::msg_api::{incoming::*, outgoing::*, code::*};
 ///      | close server   |
 ///      |--------------->| // in theory the close is unidirectional
 ///      |
-///      | kill thread
+///      | kill thread is automatic
 ///      |
 ///      ...
 ///      user program
@@ -134,18 +134,21 @@ fn spawn_write_thread(recv: Receiver<Vec<u8>>, kill_recv: Receiver<Vec<u8>>, chi
         let mut writer = BufWriter::new(child_in); // Need the stream in order to write
         let mut message: Vec<u8>;
         loop {
-            match kill_recv.recv_timeout(Duration::from_millis(10)) {
-                Err(x) => println!("No message (s): {:?}", x),
+            match kill_recv.recv_timeout(Duration::from_millis(100)) {
+                Err(x) => (),
                 Ok(..) => {
                     println!("Received kill message (s)");
                     break;
                 },
             }
 
-            match recv.recv() {
-                Ok(x) => message = x,
-                Err(..) => continue,
-            }
+            message = match recv.recv() {
+                Ok(x) => x,
+                Err(x) => {
+                    println!("No message (s): {:?}", x);
+                    continue;
+                },
+            };
 
             match writer.write_all(&message) {
                 Ok(_) => {
@@ -162,12 +165,12 @@ fn spawn_write_thread(recv: Receiver<Vec<u8>>, kill_recv: Receiver<Vec<u8>>, chi
 
 fn spawn_read_thread<'f>(send: Sender<IncomingMessage>, recv: Receiver<Vec<u8>>, child_out: ChildStdout) -> JoinHandle<()> {
     thread::spawn(move || {
-        let mut reader = BufReader::new(child_out); //TODO the raw pointer is kind of inelegant
+        let mut reader = BufReader::new(child_out);
         let mut byte_prefix = [0u8; 2];
 
         loop {
             match recv.recv_timeout(Duration::from_millis(100)) {
-                Err(x) => println!("No message (r): {:?}", x),
+                Err(..) => (),
                 Ok(..) => {
                     println!("Received kill message (r)");
                     break;
@@ -176,7 +179,8 @@ fn spawn_read_thread<'f>(send: Sender<IncomingMessage>, recv: Receiver<Vec<u8>>,
 
             match reader.read_exact(&mut byte_prefix) {
                 Ok(..) => thread::sleep(Duration::from_millis(100)),
-                Err(..) => {
+                Err(x) => {
+                    println!("No message (r): {:?}", x);
                     thread::sleep(Duration::from_millis(100));
                     continue;
                 },
@@ -280,7 +284,7 @@ mod tests {
 
     #[test]
     fn test_pub() {
-        let mut eval = EvaluatorManagerExec::default();
+        let eval: EvaluatorManagerExec = EvaluatorManagerExec::default();
 
         let _ = &eval.sender.send(test1.to_vec());
         let a = &eval.receiver.recv();

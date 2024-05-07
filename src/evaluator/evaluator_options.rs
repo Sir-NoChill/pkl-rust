@@ -1,36 +1,25 @@
-use std::{collections::HashMap, path::{Path, PathBuf}, rc::Rc};
+use std::{collections::HashMap, path::PathBuf};
 use dirs::home_dir;
 use std::env;
 
 use super::{msg_api::outgoing::{ResourceReader, ModuleReader}, logger::Logger};
 
 //TODO documentation
+//TODO this should be taken from a pkl file in the future
 pub struct EvaluatorOptions {
-    properties: HashMap<String, String>,
-
-    env: HashMap<String, String>,
-
-    module_paths: Vec<String>,
-
-    logger: Logger,
-
-    output_format: String,
-
-    allowed_modules: Vec<String>,
-
-    allowed_resources: Vec<String>,
-
-    resource_readers: Vec<ResourceReader>,
-
-    module_readers: Vec<ModuleReader>,
-
-    cache_dir: PathBuf,
-
-    root_dir: String, //TODO this should also be a path
-
-    project_dir: String, //TODO this should be a path
-
-    declared_project_dependency: ProjectDependencies
+    pub properties: HashMap<String, String>,
+    pub env: HashMap<String, String>,
+    pub module_paths: Vec<String>,
+    pub logger: Logger,
+    pub output_format: String,
+    pub allowed_modules: Vec<String>,
+    pub allowed_resources: Vec<String>,
+    pub resource_readers: Vec<ResourceReader>,
+    pub module_readers: Vec<ModuleReader>,
+    pub cache_dir: PathBuf,
+    pub root_dir: String, //TODO this should also be a path
+    pub project_dir: String, //TODO this should be a path
+    pub declared_project_dependency: ProjectDependencies
 }
 
 macro_rules! vec_of_strings {

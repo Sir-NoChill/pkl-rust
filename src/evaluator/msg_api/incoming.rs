@@ -32,9 +32,9 @@ pub enum IncomingMessage {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct CreateEvaluatorResponse {
-    requestId: i64,
-    evaluatorId: Option<i64>, // if None, then error is Some(errmsg)
-    error: Option<String>,
+    pub requestId: i64,
+    pub evaluatorId: Option<i64>, // if None, then error is Some(errmsg)
+    pub error: Option<String>,
 }
 impl DeserializableMessage for CreateEvaluatorResponse {
     fn deserialize(reader: &mut dyn std::io::Read) -> Option<Self>
@@ -49,7 +49,7 @@ impl DeserializableMessage for CreateEvaluatorResponse {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct EvaluateResponse {
-    requestId: i64,
+    pub requestId: i64,
     evaluatorId: i64,
     result: Option<Vec<u8>>,
     error: Option<String>,

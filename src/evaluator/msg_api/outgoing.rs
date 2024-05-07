@@ -6,6 +6,8 @@ use rmp_serde as rmps;
 use serde::Serialize;
 use rmps::Serializer;
 
+use crate::evaluator::evaluator_options::EvaluatorOptions;
+
 use super::code::{CODE_NEW_EVALUATOR, CODE_NEW_EVALUATOR_RESPONSE, CODE_CLOSE_EVALUATOR, CODE_EVALUATE, CODE_EVALUATE_RESPONSE, CODE_EVALUATE_READ_RESPONSE, CODE_EVALUATE_READ_MODULE_RESPONSE, CODE_LIST_RESOURCES_RESPONSE, CODE_LIST_MODULES_REQUEST};
 
 /// Packs a message in messagepasing v5 format
