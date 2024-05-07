@@ -8,6 +8,8 @@ homepage = "https://pkl-lang.org"
 readme = "README.md"
 keywords = ["configuration", "codegen"]
 categories = ["config"]
+description = "Configuration as Code"
+license = "MIT"
 
 [dependencies]
 dirs = "5.0.1"
