@@ -1,5 +1,5 @@
 [package]
-name = "pkl-rust"
+name = "pkl-bind"
 version = "0.0.1"
 edition = "2021"
 authors = ["Ayrton Chilibeck <pkl@blobfish.icu>"]
