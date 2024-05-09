@@ -36,14 +36,13 @@ use super::msg_api::{incoming::*, outgoing::*, code::*};
 ///      user program
 ///```
 ///
+#[derive(Debug)]
 pub struct EvaluatorManagerExec {
     child_process: Child,
-    pub sender: Sender<Vec<u8>>,
-    pub receiver: Receiver<IncomingMessage>,
-    killer_recv: Sender<Vec<u8>>,
-    killer_wrtr: Sender<Vec<u8>>,
     pub version: String,
     pub pkl_command: Vec<String>,
+    pub child_out: Option<ChildStdout>,
+    pub child_in: Option<ChildStdin>,
 }
 
 impl Default for EvaluatorManagerExec {
@@ -70,26 +69,18 @@ impl Default for EvaluatorManagerExec {
                                 .spawn()
                                 .expect("failed to spawn pkl server process");
 
-        // Get our channels for communicating values
-        let (sender, t_recv): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = channel();
-        let (kill_sender_r, kill_recv_r): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = channel();
-        let (kill_sender_w, kill_recv_w): (Sender<Vec<u8>>, Receiver<Vec<u8>>) = channel();
-        let (t_send, receiver): (Sender<IncomingMessage>, Receiver<IncomingMessage>) = channel();
-
         // Thread spawning
         let child_in: ChildStdin = child_process.stdin.take().expect("Failed to open stdout");
         let child_out: ChildStdout = child_process.stdout.take().expect("Failed to open stdin");
-        let _ = spawn_write_thread(t_recv, kill_recv_w, child_in);
-        let _ = spawn_read_thread(t_send, kill_recv_r, child_out);
+        // let _ = spawn_write_thread(t_recv, kill_recv_w, child_in);
+        // let _ = spawn_read_thread(t_send, kill_recv_r, child_out);
 
         Self {
             version,
-            sender,
-            receiver,
-            killer_recv: kill_sender_r,
-            killer_wrtr: kill_sender_w,
             pkl_command,
             child_process,
+            child_in: Some(child_in),
+            child_out: Some(child_out),
         }
     }
 }
@@ -98,20 +89,82 @@ impl EvaluatorManagerExec {
     /// Internal method to kill the evaluator
     fn deinit(&mut self) -> Result<(), std::io::Error> {
         //TODO this should also be logged
-        self.killer_recv.send(vec![0xff, 0xff]).expect("Failed to send kill signal to pkl reader");
-        self.killer_wrtr.send(vec![0xff, 0xff]).expect("Failed to send kill signal to pkl writer");
+        // self.killer_recv.send(vec![0xff, 0xff]).expect("Failed to send kill signal to pkl reader");
+        // self.killer_wrtr.send(vec![0xff, 0xff]).expect("Failed to send kill signal to pkl writer");
 
         self.child_process.kill()
     }
 
-    //FIXME none of these methods work, so eliminating them
-    // fn send_and_rec(&mut self, msg: &impl Serialize, t: OutgoingMessage) -> Result<IncomingMessage, RecvError> {
-    //     let message = pack_message(msg, t).expect("Failed to pack message");
+    // REVIEW: is it possible to make these async?
+    pub(crate) fn send(&mut self, msg: OutgoingMessage) {
+        let message: Vec<u8> = pack_message(msg).expect("Failed to pack message");
 
-    //     self.sender.send(message).expect("Failed to send message");
-    //     thread::sleep(Duration::from_millis(10));
-    //     self.receiver.recv()
-    // }
+        self.child_in.take().expect("failed to take").write_all(&message).expect("Failed to send message");
+        // println!("Sent message: {:?}", msg);
+    }
+
+    pub(crate) fn senrec(&mut self, msg: OutgoingMessage) -> Result<IncomingMessage, RecvError> {
+        self.send(msg);
+
+        let mut buf = [0u8; 2];
+        let prefix: MessageCode;
+        // now the fun part
+        let mut out = self.child_out.take().expect("Failed to take"); // need to take here to use in the match
+        out.read_exact(&mut buf).expect("Failed to read buffer");
+
+        prefix = MessageCode::try_from(buf[1]).expect("Failed to convert to MessageCode");
+
+        let mut value: Option<IncomingMessage> = None;
+        // TODO not very DRY, but this might be the most idiomatic way to use serde
+        match prefix {
+            MessageCode::NewEvaluatorResponse => {
+                println!("Matched new evaluator, Code: {:02X?}", prefix); //TODO Switch to logging
+                match rmp_serde::from_read::<_, CreateEvaluatorResponse>(&mut out) {
+                    Ok(msg) => value = Some(IncomingMessage::CreateEvaluatorResponse(msg)),
+                    Err(err) => eprintln!("Error decoding the message: {}", err),
+                }
+            },
+            MessageCode::EvaluateResponse => {
+                println!("Matched new evaluator, Code: {:02X?}", prefix);
+                match rmp_serde::from_read::<_, EvaluateResponse>(&mut out) {
+                    Ok(msg) => value = Some(IncomingMessage::EvaluateResponse(msg)),
+                    Err(err) => eprintln!("Error decoding the message: {}", err),
+                }
+            },
+            MessageCode::EvaluateReadModule => {
+                println!("Matched new evaluator, Code: {:02X?}", prefix);
+                match rmp_serde::from_read::<_, ReadModule>(&mut out) {
+                    Ok(msg) => value = Some(IncomingMessage::ReadModule(msg)),
+                    Err(err) => eprintln!("Error decoding the message: {}", err),
+                }
+            },
+            MessageCode::ListResourcesRequest => {
+                println!("Matched new evaluator, Code: {:02X?}", prefix);
+                match rmp_serde::from_read::<_, ListResources>(&mut out) {
+                    Ok(msg) => value = Some(IncomingMessage::ListResources(msg)),
+                    Err(err) => eprintln!("Error decoding the message: {}", err),
+                }
+            },
+            MessageCode::ListModulesRequest => {
+                println!("Matched new evaluator, Code: {:02X?}", prefix);
+                match rmp_serde::from_read::<_, ListModules>(&mut out) {
+                    Ok(msg) => value = Some(IncomingMessage::ListModules(msg)),
+                    Err(err) => eprintln!("Error decoding the message: {}", err),
+                }
+            },
+            MessageCode::EvaluateLog => {
+                println!("Matched new evaluator, Code: {:02X?}", prefix);
+                match rmp_serde::from_read::<_, Log>(&mut out) {
+                    Ok(msg) => value = Some(IncomingMessage::Log(msg)),
+                    Err(err) => eprintln!("Error decoding the message: {}", err),
+                }
+            },
+            _ => {
+                return Err(RecvError)
+            }
+        }
+        return Ok(value.expect("Failed to retrieve value"));
+    }
 
     // fn send(&self, msg: &impl Serialize, t: OutgoingMessage) {
     //     let message = pack_message(msg, t).expect("Could not determine message type, failed to serialize");
@@ -129,178 +182,94 @@ impl Drop for EvaluatorManagerExec {
     }
 }
 
-fn spawn_write_thread(recv: Receiver<Vec<u8>>, kill_recv: Receiver<Vec<u8>>, child_in: ChildStdin) -> JoinHandle<()> {
-    thread::spawn(move || {
-        let mut writer = BufWriter::new(child_in); // Need the stream in order to write
-        let mut message: Vec<u8>;
-        loop {
-            match kill_recv.recv_timeout(Duration::from_millis(100)) {
-                Err(x) => (),
-                Ok(..) => {
-                    println!("Received kill message (s)");
-                    break;
-                },
-            }
-
-            message = match recv.recv() {
-                Ok(x) => x,
-                Err(x) => {
-                    println!("No message (s): {:?}", x);
-                    continue;
-                },
-            };
-
-            match writer.write_all(&message) {
-                Ok(_) => {
-                    if let Err(err) = writer.flush() {
-                        eprintln!("Error flushing: {}", err);
-                    }
-                },
-                Err(err) => eprintln!("Error serializing message: {}", err), //TODO this should be logged instead
-            }
-            println!("Wrote message {:?}", &message);
-        }
-    })
-}
-
-fn spawn_read_thread<'f>(send: Sender<IncomingMessage>, recv: Receiver<Vec<u8>>, child_out: ChildStdout) -> JoinHandle<()> {
-    thread::spawn(move || {
-        let mut reader = BufReader::new(child_out);
-        let mut byte_prefix = [0u8; 2];
-
-        loop {
-            match recv.recv_timeout(Duration::from_millis(100)) {
-                Err(..) => (),
-                Ok(..) => {
-                    println!("Received kill message (r)");
-                    break;
-                },
-            }
-
-            match reader.read_exact(&mut byte_prefix) {
-                Ok(..) => thread::sleep(Duration::from_millis(100)),
-                Err(x) => {
-                    println!("No message (r): {:?}", x);
-                    thread::sleep(Duration::from_millis(100));
-                    continue;
-                },
-            }
-            println!("Recieved message: {:?}", &byte_prefix);
-
-            let prefix = MessageCode::try_from(byte_prefix[1]).expect("Failed to resolve message type");
-            let mut value: Option<IncomingMessage> = None;
-            println!("Recieved message: {:?}", value);
-
-            // TODO not very DRY, but this might be the most idiomatic way to use serde
-            match prefix {
-                MessageCode::NewEvaluatorResponse => {
-                    println!("Matched new evaluator, Code: {:02X?}", prefix);
-                    match rmp_serde::from_read::<_, CreateEvaluatorResponse>(&mut reader) {
-                        Ok(msg) => value = Some(IncomingMessage::CreateEvaluatorResponse(msg)),
-                        Err(err) => eprintln!("Error decoding the message: {}", err),
-                    }
-                },
-                MessageCode::EvaluateResponse => {
-                    println!("Matched new evaluator, Code: {:02X?}", prefix);
-                    match rmp_serde::from_read::<_, EvaluateResponse>(&mut reader) {
-                        Ok(msg) => value = Some(IncomingMessage::EvaluateResponse(msg)),
-                        Err(err) => eprintln!("Error decoding the message: {}", err),
-                    }
-                },
-                MessageCode::EvaluateReadModule => {
-                    println!("Matched new evaluator, Code: {:02X?}", prefix);
-                    match rmp_serde::from_read::<_, ReadModule>(&mut reader) {
-                        Ok(msg) => value = Some(IncomingMessage::ReadModule(msg)),
-                        Err(err) => eprintln!("Error decoding the message: {}", err),
-                    }
-                },
-                MessageCode::ListResourcesRequest => {
-                    println!("Matched new evaluator, Code: {:02X?}", prefix);
-                    match rmp_serde::from_read::<_, ListResources>(&mut reader) {
-                        Ok(msg) => value = Some(IncomingMessage::ListResources(msg)),
-                        Err(err) => eprintln!("Error decoding the message: {}", err),
-                    }
-                },
-                MessageCode::ListModulesRequest => {
-                    println!("Matched new evaluator, Code: {:02X?}", prefix);
-                    match rmp_serde::from_read::<_, ListModules>(&mut reader) {
-                        Ok(msg) => value = Some(IncomingMessage::ListModules(msg)),
-                        Err(err) => eprintln!("Error decoding the message: {}", err),
-                    }
-                },
-                MessageCode::EvaluateLog => {
-                    println!("Matched new evaluator, Code: {:02X?}", prefix);
-                    match rmp_serde::from_read::<_, Log>(&mut reader) {
-                        Ok(msg) => value = Some(IncomingMessage::Log(msg)),
-                        Err(err) => eprintln!("Error decoding the message: {}", err),
-                    }
-                },
-                _ => {
-                    panic!("Failed to match any code {:?}", prefix);
-                }
-            }
-
-            send.send(value.expect("Failed to deserialize the message")).expect("Failed to send result");
-        }
-    })
-}
-
 #[cfg(test)]
 mod tests {
-    use std::process::Stdio;
-
-
     use super::*;
-    const test1: [u8; 139] = [0x92, 0x20, 0x83, 0xA9, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73,
-                         0x74, 0x49, 0x64, 0xCC, 0x87, 0xAE, 0x61, 0x6C, 0x6C, 0x6F,
-                         0x77, 0x65, 0x64, 0x4D, 0x6F, 0x64, 0x75, 0x6C, 0x65, 0x73,
-                         0x94, 0xA4, 0x70, 0x6B, 0x6C, 0x3A, 0xA5, 0x72, 0x65, 0x70,
-                         0x6C, 0x3A, 0xA5, 0x66, 0x69, 0x6C, 0x65, 0x3A, 0xA9, 0x63,
-                         0x75, 0x73, 0x74, 0x6F, 0x6D, 0x66, 0x73, 0x3A, 0xB3, 0x63,
-                         0x6C, 0x69, 0x65, 0x6E, 0x74, 0x4D, 0x6F, 0x64, 0x75, 0x6C,
-                         0x65, 0x52, 0x65, 0x61, 0x64, 0x65, 0x72, 0x73, 0x91, 0x84,
-                         0xA6, 0x73, 0x63, 0x68, 0x65, 0x6D, 0x65, 0xA8, 0x63, 0x75,
-                         0x73, 0x74, 0x6F, 0x6D, 0x66, 0x73, 0xB3, 0x68, 0x61, 0x73,
-                         0x48, 0x69, 0x65, 0x72, 0x61, 0x72, 0x63, 0x68, 0x69, 0x63,
-                         0x61, 0x6C, 0x55, 0x72, 0x69, 0x73, 0xC3, 0xAB, 0x69, 0x73,
-                         0x47, 0x6C, 0x6F, 0x62, 0x62, 0x61, 0x62, 0x6C, 0x65, 0xC3,
-                         0xA7, 0x69, 0x73, 0x4C, 0x6F, 0x63, 0x61, 0x6C, 0xC3];
 
-    const CREATE_EVAL: CreateEvaluator = CreateEvaluator{
-        requestId: 140,
-        clientResourceReaders: None,
-        clientModuleReaders: None,
-        modulePaths: None,
-        env: None,
-        properties: None,
-        outputFormat: None,
-        allowedModules: None,
-        allowedResources: None,
-        rootDir: None,
-        cacheDir: None,
-        project: None,
-        timeoutSeconds: None,
-    };
+    #[allow(dead_code)]
+    fn print_binary(vec: &[u8]) {
+        print!("Binary       : ");
+        print!("[");
+        for i in vec {
+            print!("0x{i:02X}, ");
+        }
+        println!("]");
+
+    }
 
     #[test]
-    fn test_pub() {
-        let eval: EvaluatorManagerExec = EvaluatorManagerExec::default();
+    fn test_regular_send() {
+        let mut eval: EvaluatorManagerExec = EvaluatorManagerExec::default();
 
-        let _ = &eval.sender.send(test1.to_vec());
-        let a = &eval.receiver.recv();
-        println!("Result: {:?}", a);
+        let mut r = [0u8;2];
 
-        let _ = &eval.sender.send(test1.to_vec());
-        let a = &eval.receiver.recv();
-        println!("Result: {:?}", a);
+        //TODO extract these as constants
+        let allowed_modules: Vec<String> = vec!["pkl:".into(), "repl:".into(), "file:".into(), "customfs:".into()];
+        let resource_reader = vec![ResourceReader {
+            scheme: "customfs".into(),
+            hasHierarchicalUris: true,
+            isGlobbable: true,
+        }];
 
-        let _ = &eval.sender.send(test1.to_vec());
-        let a = &eval.receiver.recv();
-        println!("Result: {:?}", a);
+        let create_eval = CreateEvaluator {
+            requestId: 135,
+            clientResourceReaders: Some(resource_reader),
+            allowedModules: Some(allowed_modules),
+            clientModuleReaders: None,
+            modulePaths: None,
+            env: None,
+            properties: None,
+            outputFormat: None,
+            allowedResources: None,
+            rootDir: None,
+            cacheDir: None,
+            project: None,
+            timeoutSeconds: None,
+        };
 
-        let _ = &eval.sender.send(test1.to_vec());
-        let a = &eval.receiver.recv();
-        println!("Last one: {:?}", a);
+        let test1 = pack_message(OutgoingMessage::CreateEvaluator(create_eval)).expect("Failed to pack");
+
+        let _ = eval.child_in.take().unwrap().write(&test1.to_vec());
+        // println!("Wrote message: {:?}", &test1.to_vec());
+        // print_binary(&test1.to_vec());
+        let a = eval.child_out.take().unwrap().read_exact(&mut r);
+        // print_binary(&r);
+        assert!(a.is_ok());
+        assert!(r[1] == 33);
+    }
+
+    #[test]
+    fn test_senrec() {
+        let mut eval = EvaluatorManagerExec::default();
+
+        let allowed_modules: Vec<String> = vec!["pkl:".into(), "repl:".into(), "file:".into(), "customfs:".into()];
+        let resource_reader = vec![ResourceReader {
+            scheme: "customfs".into(),
+            hasHierarchicalUris: true,
+            isGlobbable: true,
+        }];
+
+        let create_eval = CreateEvaluator {
+            requestId: 135,
+            clientResourceReaders: Some(resource_reader),
+            allowedModules: Some(allowed_modules),
+            clientModuleReaders: None,
+            modulePaths: None,
+            env: None,
+            properties: None,
+            outputFormat: None,
+            allowedResources: None,
+            rootDir: None,
+            cacheDir: None,
+            project: None,
+            timeoutSeconds: None,
+        };
+
+        // print_binary(&pack_message(OutgoingMessage::CreateEvaluator(create_eval)).expect("failed"));
+        // print_binary(&test1);
+
+        let result = eval.senrec(OutgoingMessage::CreateEvaluator(create_eval)).expect("Failed to accept");
+        println!("Received evaluator response: {:?}", result);
     }
 
 }

@@ -42,6 +42,7 @@ pub trait EvaluatorMethods { // NOTE this allows for other types of evaluators, 
     fn evaluate_expression<T>(&self, source: &ModuleSource, expr: Option<String>) -> Result<T, &'static str>;
     fn evaluate_expression_raw<T>(&self, source: &ModuleSource, expr: Option<String>) -> Result<T, &'static str>;
     fn closed(&self, ) -> bool;
+    fn close(&self);
 }
 
 impl EvaluatorMethods for Evaluator {
@@ -80,6 +81,10 @@ impl EvaluatorMethods for Evaluator {
     }
 
     fn closed(&self, ) -> bool {
+        todo!()
+    }
+
+    fn close(&self) {
         todo!()
     }
 }

@@ -1,7 +1,6 @@
-use std::{sync::{atomic::AtomicBool, Mutex, mpsc::{Sender, Receiver, channel}}, collections::HashMap, default, rc::Rc, thread, time::Duration};
 
-use super::{evaluator::Evaluator, evaluator_options::EvaluatorOptions, msg_api::{incoming::IncomingMessage, outgoing::{OutgoingMessage, CreateEvaluator, pack_message}}};
-use super::{msg_api::{incoming, outgoing}, evaluator_manager_exec::EvaluatorManagerExec};
+use super::{evaluator::{Evaluator, EvaluatorMethods}, evaluator_options::EvaluatorOptions, msg_api::{incoming::IncomingMessage, outgoing::{OutgoingMessage, CreateEvaluator, pack_message, CloseEvaluator}}};
+use super::evaluator_manager_exec::EvaluatorManagerExec;
 
 
 #[derive(Default)]
@@ -23,8 +22,7 @@ impl EvaluatorManager {
         todo!()
     }
 
-    pub fn new_evaluator(&self, options: Option<EvaluatorOptions>) -> Result<Evaluator, &'static str> {
-        let mut evaluator = Evaluator::default();
+    pub fn new_evaluator(&mut self, options: Option<EvaluatorOptions>) -> Result<Evaluator, &'static str> {
         let opts = match options {
             None => Default::default(),
             Some(x) => x,
@@ -46,20 +44,10 @@ impl EvaluatorManager {
             timeoutSeconds: None,
         };
 
-        let message = pack_message(&message_data, OutgoingMessage::CreateEvaluator).expect("Failed to serialize message");
-
-        thread::sleep(Duration::from_millis(100));
-        let sender = self.exec.sender.clone();
-        let _ = sender.send(message.clone());
-        let eval_resp = match self.exec.receiver.recv_timeout(Duration::from_secs(3)).expect("Failed to receive eval message") {
+        let eval_resp = match self.exec.senrec(OutgoingMessage::CreateEvaluator(message_data)).expect("Failed to send message") {
             IncomingMessage::CreateEvaluatorResponse(x) => x,
-            _ => return Err("Failed to get message"),
+            _ => panic!("Unexpected response"),
         };
-
-
-        if eval_resp.error != None {
-            return Err("PKL server issued an error in create evaluator");
-        }
 
         let evaluator = Evaluator {
             evaluator_id: eval_resp.evaluatorId.unwrap(), // if we did not error, then this is guaranteed
@@ -80,19 +68,33 @@ impl EvaluatorManager {
     }
 }
 
+impl Drop for EvaluatorManager {
+    fn drop(&mut self) {
+        for evaluator in &self.evaluators {
+            let msg = CloseEvaluator {
+                evaluatorId: Some(evaluator.evaluator_id),
+            };
+            self.exec.send(OutgoingMessage::CloseEvaluator(msg));
+            evaluator.close();
+        }
+
+        // Droppign the EvaluatorManagerExec is automatic
+        //  from the drop trait
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_new_evaluator() {
-        let eval = EvaluatorManager::default();
+        let mut eval = EvaluatorManager::default();
 
         let _evaluator = eval.new_evaluator(None).expect("Failed to create a new evaluator");
     }
 
     #[test]
     fn test_close_evaluator() {
-
     }
 }

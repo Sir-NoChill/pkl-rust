@@ -1,13 +1,9 @@
 #![allow(nonstandard_style)]
 
-use std::collections::HashMap;
-
 use rmp_serde as rmps;
 
 use rmps::from_slice;
-use serde::{Deserialize, de::{DeserializeOwned, Visitor, self}};
-
-use super::code::{CODE_NEW_EVALUATOR, CODE_EVALUATE_RESPONSE, CODE_EVALUATE_READ_MODULE, CODE_LIST_RESOURCES_RESPONSE, CODE_LIST_MODULES_RESPONSE, CODE_EVALUATE_LOG, CODE_LIST_MODULES_REQUEST};
+use serde::Deserialize;
 
 pub fn decode<T: for<'a> Deserialize<'a>>(msg: Vec<u8>) -> Result<(u8, T), &'static str> {
     return Ok(from_slice::<(u8, T)>(&msg).expect("Failed to deserialize"));
@@ -28,6 +24,58 @@ pub enum IncomingMessage {
     ListResources(ListResources),
     ListModules(ListModules),
     Log(Log),
+}
+
+impl IncomingMessage {
+    fn create_evaluator_response(&self) -> Option<CreateEvaluatorResponse> {
+        if let IncomingMessage::CreateEvaluatorResponse(msg) = self {
+            Some(msg.clone())
+        } else {
+            None
+        }
+    }
+    fn evaluate_response(&self) -> Option<EvaluateResponse> {
+        if let IncomingMessage::EvaluateResponse(msg) = self {
+            Some(msg.clone())
+        } else {
+            None
+        }
+    }
+    fn read_resource(&self) -> Option<ReadResource> {
+        if let IncomingMessage::ReadResource(msg) = self {
+            Some(msg.clone())
+        } else {
+            None
+        }
+    }
+    fn read_module(&self) -> Option<ReadModule> {
+        if let IncomingMessage::ReadModule(msg) = self {
+            Some(msg.clone())
+        } else {
+            None
+        }
+    }
+    fn list_resources(&self) -> Option<ListResources> {
+        if let IncomingMessage::ListResources(msg) = self {
+            Some(msg.clone())
+        } else {
+            None
+        }
+    }
+    fn list_modules(&self) -> Option<ListModules> {
+        if let IncomingMessage::ListModules(msg) = self {
+            Some(msg.clone())
+        } else {
+            None
+        }
+    }
+    fn log(&self) -> Option<Log> {
+        if let IncomingMessage::Log(msg) = self {
+            Some(msg.clone())
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Deserialize, Debug, Clone)]
