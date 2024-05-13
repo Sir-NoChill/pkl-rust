@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use serde::Deserialize;
 
 use super::{evaluator::{Evaluator, EvaluatorMethods}, evaluator_options::EvaluatorOptions, msg_api::{incoming::IncomingMessage, outgoing::{OutgoingMessage, CreateEvaluator, pack_message, CloseEvaluator, Evaluate, ListModulesResponse, PathElement}}, module_source::ModuleSource};
-use super::evaluator_manager_exec::EvaluatorManagerExec;
+use super::executor::EvaluatorManagerExec;
 
 
 #[derive(Default)]
