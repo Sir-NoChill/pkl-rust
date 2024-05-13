@@ -60,10 +60,10 @@ impl Serialize for OutgoingMessage {
 
 #[derive(Debug, Serialize)]
 pub struct ModuleReader {
-    scheme: String,
-    hasHierarchicalUris: bool,
-    isGlobbable: bool,
-    isLocal: bool,
+    pub scheme: String,
+    pub hasHierarchicalUris: bool,
+    pub isGlobbable: bool,
+    pub isLocal: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -75,19 +75,19 @@ pub struct ResourceReader {
 
 #[derive(Debug, Serialize)]
 pub struct Checksums {
-    checksums: String,
+    pub checksums: String,
 }
 
 #[derive(Debug, Serialize)]
 pub struct ProjectOrDependency {
     #[serde(skip_serializing_if = "Option::is_none")]
-    packageUri: Option<String>,
-    r#type: String,
+    pub packageUri: Option<String>,
+    pub r#type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    projectFileUri: Option<String>,
+    pub projectFileUri: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    checksums: Option<Checksums>,
-    dependencies: HashMap<String, ProjectOrDependency>,
+    pub checksums: Option<Checksums>,
+    pub dependencies: HashMap<String, ProjectOrDependency>,
 }
 
 #[derive(Debug, Serialize)]
@@ -138,47 +138,47 @@ pub struct Evaluate {
 
 #[derive(Debug, Serialize)]
 pub struct ReadResourceResponse {
-    requestId: i64,
-    evaluatorId: i64,
+    pub requestId: i64,
+    pub evaluatorId: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    contents: Option<Vec<u8>>,
+    pub contents: Option<Vec<u8>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    error: Option<String>,
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct ReadModuleResponse {
-    requestId: i64,
-    evaluatorId: i64,
+    pub requestId: i64,
+    pub evaluatorId: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    contents: Option<String>,
+    pub contents: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    error: Option<String>,
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct ListResourceResponse {
-    requestId: i64,
-    evaluatorId: i64,
+    pub requestId: i64,
+    pub evaluatorId: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pathElements: Option<Vec<PathElement>>,
-    error: Option<String>,
+    pub pathElements: Option<Vec<PathElement>>,
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct ListModulesResponse {
-    requestId: i64,
-    evaluatorId: i64,
+    pub requestId: i64,
+    pub evaluatorId: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pathElements: Option<Vec<PathElement>>,
+    pub pathElements: Option<Vec<PathElement>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    error: Option<String>,
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct PathElement {
-    name: String,
-    isDirectory: bool,
+    pub name: String,
+    pub isDirectory: bool,
 }
 
 #[cfg(test)]

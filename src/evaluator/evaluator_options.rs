@@ -30,7 +30,7 @@ impl Default for EvaluatorOptions {
     fn default() -> Self {
         let allowed_resources: Vec<String> = vec_of_strings!["http:", "https:", "file:",
                                                      "env:", "prop:", "modulepath:",
-                                                     "package:", "projectpackage:"];
+                                                     "package:", "projectpackage:", "customfs:"];
         let allowed_modules: Vec<String> = vec_of_strings!["pkl:", "repl:", "file:", "http:",
                                                    "https:", "modulepath:", "package:",
                                                    "projectpackage:"];

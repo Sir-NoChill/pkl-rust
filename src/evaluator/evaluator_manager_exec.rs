@@ -99,8 +99,12 @@ impl EvaluatorManagerExec {
     pub(crate) fn send(&mut self, msg: OutgoingMessage) {
         let message: Vec<u8> = pack_message(msg).expect("Failed to pack message");
 
-        self.child_in.take().expect("failed to take").write_all(&message).expect("Failed to send message");
+        let mut sender = self.child_in.take().expect("Failed to take");
+
+        sender.write_all(&message).expect("Failed to send message");
         // println!("Sent message: {:?}", msg);
+
+        self.child_in = Some(sender);
     }
 
     pub(crate) fn senrec(&mut self, msg: OutgoingMessage) -> Result<IncomingMessage, RecvError> {
@@ -163,6 +167,9 @@ impl EvaluatorManagerExec {
                 return Err(RecvError)
             }
         }
+
+        self.child_out = Some(out);
+
         return Ok(value.expect("Failed to retrieve value"));
     }
 

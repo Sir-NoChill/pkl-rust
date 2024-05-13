@@ -1,5 +1,9 @@
 
-use super::{evaluator::{Evaluator, EvaluatorMethods}, evaluator_options::EvaluatorOptions, msg_api::{incoming::IncomingMessage, outgoing::{OutgoingMessage, CreateEvaluator, pack_message, CloseEvaluator}}};
+use std::path::PathBuf;
+
+use serde::Deserialize;
+
+use super::{evaluator::{Evaluator, EvaluatorMethods}, evaluator_options::EvaluatorOptions, msg_api::{incoming::IncomingMessage, outgoing::{OutgoingMessage, CreateEvaluator, pack_message, CloseEvaluator, Evaluate, ListModulesResponse, PathElement}}, module_source::ModuleSource};
 use super::evaluator_manager_exec::EvaluatorManagerExec;
 
 
@@ -22,7 +26,7 @@ impl EvaluatorManager {
         todo!()
     }
 
-    pub fn new_evaluator(&mut self, options: Option<EvaluatorOptions>) -> Result<Evaluator, &'static str> {
+     fn new_evaluator(&mut self, options: Option<EvaluatorOptions>) -> Result<i64, &'static str> {
         let opts = match options {
             None => Default::default(),
             Some(x) => x,
@@ -60,11 +64,94 @@ impl EvaluatorManager {
             opts,
         };
 
-        return Ok(evaluator);
+        let res = evaluator.evaluator_id.clone();
+
+        self.evaluators.push(evaluator);
+
+        return Ok(res);
     }
 
     fn new_project_evaluator() -> Result<Evaluator, &'static str> {
         todo!()
+    }
+
+    fn evaluate_module<T: for<'a> Deserialize<'a>>(&mut self, file: String, id_number: i64) -> Result<T, &'static str> {
+        // send the evaluate request
+        let eval_req = Evaluate {
+            requestId: rand::random::<i64>(),
+            evaluatorId: id_number,
+            moduleUri: file.clone(),
+            moduleText: None,
+            expr: None,
+        };
+
+        let eval_msg = OutgoingMessage::Evaluate(eval_req);
+        let mut resp = self.exec.senrec(eval_msg).expect("Failed to receive message");
+
+        loop {
+            match &mut resp {
+                IncomingMessage::EvaluateResponse(x) => {
+                    let close_msg = CloseEvaluator {
+                        evaluatorId: Some(id_number.clone()),
+                    };
+
+                    self.exec.send(OutgoingMessage::CloseEvaluator(close_msg));
+                    //TODO get the data and decode
+
+                    let data = x.clone().result.expect("failed to get result");
+
+                    // FIXME fails to decode, need to unmarshal data
+                    print!("Data: ");
+                    for d in &data {
+                        print!("{:#04X}, ", d);
+                    }
+                    println!();
+
+                    #[derive(Deserialize, Debug)]
+                    struct PklEncoding {
+                        v: i64,
+                        module: String,
+                        file: String,
+                        data: Vec<u8>,
+                    }
+                    let res: PklEncoding = rmp_serde::from_slice(&data).expect("Failed to deserialize");
+                    println!("Res: {:?}", res);
+                    return Err("e");
+                },
+                IncomingMessage::ReadResource(x) => todo!(),
+                IncomingMessage::ReadModule(x) => todo!(),
+                IncomingMessage::ListResources(x) => todo!(),
+                IncomingMessage::ListModules(x) => {
+                    // get all the files in the module:
+                    let path = PathBuf::from(file.clone());
+                    // let mut files = file;
+                    if path.is_dir() {
+                        // files = std::fs::read_dir(path); // TODO
+                    }
+
+                    let mut modules: Vec<PathElement> = vec![];
+                    // for file in files {
+                    //     // TODO make module
+                    // }
+
+                    let list_resp = ListModulesResponse{
+                        requestId: x.requestId,
+                        evaluatorId: id_number.clone(),
+                        pathElements: Some(modules),
+                        error: None,
+                    };
+
+                    let resp = self.exec.senrec(OutgoingMessage::ListModulesResponse(list_resp)).expect("Failed to send/receive data");
+
+                },
+                IncomingMessage::Log(_) => todo!(),
+                _ => return Err("Client received unexpected response from server"),
+            }
+        }
+
+        // send the any required list_moduels response
+        // send any read_module_response
+        // send the close evaluator
     }
 }
 
@@ -75,7 +162,7 @@ impl Drop for EvaluatorManager {
                 evaluatorId: Some(evaluator.evaluator_id),
             };
             self.exec.send(OutgoingMessage::CloseEvaluator(msg));
-            evaluator.close();
+            // evaluator.close();
         }
 
         // Droppign the EvaluatorManagerExec is automatic
@@ -85,6 +172,8 @@ impl Drop for EvaluatorManager {
 
 #[cfg(test)]
 mod tests {
+    use serde::Deserialize;
+
     use super::*;
 
     #[test]
@@ -95,6 +184,21 @@ mod tests {
     }
 
     #[test]
-    fn test_close_evaluator() {
+    fn test_standard_pipeline() {
+        #[derive(Deserialize)]
+        struct Test {
+            foo: i64,
+            bar: i32,
+        }
+
+        let mut eval = EvaluatorManager::default();
+
+        let evaluator = eval.new_evaluator(None).expect("Failed to create a new evaluator");
+
+        let test: Test = eval.evaluate_module::<Test>("file:///home/stormblessed/Code/pkl-rust/src/evaluator/tests/test.pkl".into(), evaluator).expect("Failed to obtain result");
+
+        assert_eq!(test.foo, 1);
+        assert_eq!(test.bar, 2);
     }
+
 }

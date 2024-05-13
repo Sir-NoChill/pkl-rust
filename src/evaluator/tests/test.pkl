@@ -1,0 +1,4 @@
+module Test
+
+foo = 1
+bar = 2
