@@ -28,8 +28,8 @@ impl ModuleSource {
 /// # Example
 ///
 /// ```
-/// use pkl_rust::evaluator::module_source::file_source;
-/// let source = file_source("test/file.pkl".into());
+/// use pkl_bind::evaluator::module_source::file_source;
+/// let source = file_source("tests/test.pkl".into());
 ///
 /// assert_eq!(source.uri().scheme(), "file");
 /// // assert_eq!(source.uri.path(), "/home/$USER/$DIR/test/file.pkl");

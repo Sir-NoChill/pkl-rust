@@ -14,7 +14,7 @@ use super::msg_api::{incoming::*, outgoing::*, code::*};
 /// When we instantiate an EvaluatorManagerExec, we spawn a pkl process
 /// and then communicate to it via message passing with two threads
 /// handling the incoming and outgoing messages respectively.
-///```no-run
+///```no_run
 ///   pkl-rust           pkl
 ///      |  get version
 ///      |--------------->|
@@ -37,7 +37,7 @@ use super::msg_api::{incoming::*, outgoing::*, code::*};
 ///```
 ///
 #[derive(Debug)]
-pub struct EvaluatorManagerExec {
+pub struct Executor {
     child_process: Child,
     pub version: String,
     pub pkl_command: Vec<String>,
@@ -45,7 +45,7 @@ pub struct EvaluatorManagerExec {
     pub child_in: Option<ChildStdin>,
 }
 
-impl Default for EvaluatorManagerExec {
+impl Default for Executor {
     fn default() -> Self {
         //TODO need to get the pkl command from the user? or at least search the system PATH
         let pkl_command = vec!["/home/stormblessed/software/pkl".to_string(), "server".to_string()];
@@ -85,7 +85,7 @@ impl Default for EvaluatorManagerExec {
     }
 }
 
-impl EvaluatorManagerExec {
+impl Executor {
     /// Internal method to kill the evaluator
     fn deinit(&mut self) -> Result<(), std::io::Error> {
         //TODO this should also be logged
@@ -183,7 +183,7 @@ impl EvaluatorManagerExec {
     // }
 }
 
-impl Drop for EvaluatorManagerExec {
+impl Drop for Executor {
     fn drop(&mut self) {
         let _ = self.deinit();
     }
@@ -206,7 +206,7 @@ mod tests {
 
     #[test]
     fn test_regular_send() {
-        let mut eval: EvaluatorManagerExec = EvaluatorManagerExec::default();
+        let mut eval: Executor = Executor::default();
 
         let mut r = [0u8;2];
 
@@ -247,7 +247,7 @@ mod tests {
 
     #[test]
     fn test_senrec() {
-        let mut eval = EvaluatorManagerExec::default();
+        let mut eval = Executor::default();
 
         let allowed_modules: Vec<String> = vec!["pkl:".into(), "repl:".into(), "file:".into(), "customfs:".into()];
         let resource_reader = vec![ResourceReader {

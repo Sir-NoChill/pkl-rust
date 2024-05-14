@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use serde::Deserialize;
 
 use super::{evaluator::{Evaluator, EvaluatorMethods}, evaluator_options::EvaluatorOptions, msg_api::{incoming::IncomingMessage, outgoing::{OutgoingMessage, CreateEvaluator, pack_message, CloseEvaluator, Evaluate, ListModulesResponse, PathElement}}, module_source::ModuleSource};
-use super::executor::EvaluatorManagerExec;
+use super::executor::Executor;
 
 
 #[derive(Default)]
@@ -12,7 +12,7 @@ pub struct EvaluatorManager {
     // interrupts: Mutex<HashMap<Sender<OutgoingMessage>, i64>>, // TODO https://docs.rs/async-map/latest/async_map/ ??
     evaluators: Vec<Evaluator>,
     // pending_evaluators: Evaluator,
-    exec: EvaluatorManagerExec,
+    exec: Executor,
     // closed: AtomicBool,
     // initialized: bool,
 }
@@ -200,5 +200,4 @@ mod tests {
         assert_eq!(test.foo, 1);
         assert_eq!(test.bar, 2);
     }
-
 }
