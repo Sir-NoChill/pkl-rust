@@ -98,46 +98,46 @@ impl DeserializableMessage for CreateEvaluatorResponse {
 #[derive(Deserialize, Debug, Clone)]
 pub struct EvaluateResponse {
     pub requestId: i64,
-    evaluatorId: i64,
-    result: Option<Vec<u8>>,
-    error: Option<String>,
+    pub evaluatorId: i64,
+    pub result: Option<Vec<u8>>,
+    pub error: Option<String>,
 }
 
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct ReadResource {
-    requestId: i64,
-    evaluatorId: i64,
-    uri: String,
+    pub requestId: i64,
+    pub evaluatorId: i64,
+    pub uri: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct ReadModule {
-    requestId: i64,
-    evaluatorId: i64,
-    uri: String
+    pub requestId: i64,
+    pub evaluatorId: i64,
+    pub uri: String
 }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct ListResources {
-    requestId: i64,
-    evaluatorId: i64,
-    uri: String,
+    pub requestId: i64,
+    pub evaluatorId: i64,
+    pub uri: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct ListModules {
-    requestId: i64,
-    evaluatorId: i64,
-    uri: String,
+    pub requestId: i64,
+    pub evaluatorId: i64,
+    pub uri: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Log {
-    evaluatorId: i64,
-    level: i8,
-    message: String,
-    frameUri: String,
+    pub evaluatorId: i64,
+    pub level: i8,
+    pub message: String,
+    pub frameUri: String,
 }
 
 
