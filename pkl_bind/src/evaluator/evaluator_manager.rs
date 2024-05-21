@@ -185,6 +185,7 @@ mod tests {
 
     #[test]
     fn test_standard_pipeline() {
+        // Fails since we need our own macro to deserialize this
         #[derive(Deserialize)]
         struct Test {
             foo: i64,

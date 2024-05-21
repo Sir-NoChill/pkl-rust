@@ -13,8 +13,11 @@ license = "MIT"
 
 [dependencies]
 dirs = "5.0.1"
+quote = "1.0.36"
 rand = "0.8.5"
 rmp = "0.8.12"
 rmp-serde = "1.1.2"
 serde = { version = "1.0.197", features = ["derive"] }
+syn = "2.0.64"
+trybuild = "1.0.96"
 url = "2.5.0"
