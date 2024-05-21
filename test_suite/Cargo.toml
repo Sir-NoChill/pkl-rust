@@ -1,0 +1,12 @@
+[package]
+name = "pkl_bind_test_suite"
+version = "0.0.0"
+authors = ["Ayrton Chilibeck <pkl@blobfish.icu>"]
+publish = false
+edition = "2021"
+
+[features]
+unstable = ["pkl-bind/unstable"]
+
+[dependencies]
+pkl-bind = { path = "../pkl-bind" }
