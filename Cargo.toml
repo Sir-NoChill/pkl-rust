@@ -5,6 +5,7 @@ members = [
     "pkl-gen",
     "test_suite",
 ]
+resolver = "2"
 
 [patch.crates-io]
 pkl-bind = { path = "pkl-bind" }
