@@ -4,3 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+proc-macro2 = "1.0.83"
+quote.workspace = true
+rmp-serde = "1.3.0"
+syn.workspace = true
+trybuild = "1.0.96"
+
+[lib]
+proc-macro = true
