@@ -172,6 +172,8 @@ impl Drop for EvaluatorManager {
 
 #[cfg(test)]
 mod tests {
+    use pkl_derive::Pkl;
+    use crate::evaluator::decoder::Pkl;
     use serde::Deserialize;
 
     use super::*;
@@ -186,7 +188,7 @@ mod tests {
     #[test]
     fn test_standard_pipeline() {
         // Fails since we need our own macro to deserialize this
-        #[derive(Deserialize)]
+        #[derive(Deserialize, Pkl)]
         struct Test {
             foo: i64,
             bar: i32,
