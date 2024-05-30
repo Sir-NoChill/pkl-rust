@@ -3,7 +3,9 @@ use std::path::PathBuf;
 
 use serde::Deserialize;
 
-use super::{evaluator::{Evaluator, EvaluatorMethods}, evaluator_options::EvaluatorOptions, msg_api::{incoming::IncomingMessage, outgoing::{OutgoingMessage, CreateEvaluator, pack_message, CloseEvaluator, Evaluate, ListModulesResponse, PathElement}}, module_source::ModuleSource};
+use crate::evaluator::decoder::Pkl;
+
+use super::{evaluator::Evaluator, evaluator_options::EvaluatorOptions, msg_api::{incoming::IncomingMessage, outgoing::{OutgoingMessage, CreateEvaluator, CloseEvaluator, Evaluate, ListModulesResponse, PathElement}}};
 use super::executor::Executor;
 
 
@@ -75,7 +77,7 @@ impl EvaluatorManager {
         todo!()
     }
 
-    fn evaluate_module<T: for<'a> Deserialize<'a>>(&mut self, file: String, id_number: i64) -> Result<T, &'static str> {
+    fn evaluate_module<T>(&mut self, file: String, id_number: i64) -> Result<T, &'static str> where T: Pkl + std::fmt::Debug {
         // send the evaluate request
         let eval_req = Evaluate {
             request_id: rand::random::<i64>(),
@@ -98,6 +100,7 @@ impl EvaluatorManager {
                     self.exec.send(OutgoingMessage::CloseEvaluator(close_msg));
                     //TODO get the data and decode
 
+                    println!("Data: {:?}", x);
                     let data = x.clone().result.expect("failed to get result");
 
                     // FIXME fails to decode, need to unmarshal data
@@ -107,16 +110,9 @@ impl EvaluatorManager {
                     }
                     println!();
 
-                    #[derive(Deserialize, Debug)]
-                    struct PklEncoding {
-                        v: i64,
-                        module: String,
-                        file: String,
-                        data: Vec<u8>,
-                    }
-                    let res: PklEncoding = rmp_serde::from_slice(&data).expect("Failed to deserialize");
+                    let res = T::unmarshal(data);
                     println!("Res: {:?}", res);
-                    return Err("e");
+                    return res;
                 },
                 IncomingMessage::ReadResource(x) => todo!(),
                 IncomingMessage::ReadModule(x) => todo!(),
@@ -188,7 +184,7 @@ mod tests {
     #[test]
     fn test_standard_pipeline() {
         // Fails since we need our own macro to deserialize this
-        #[derive(Deserialize, Pkl)]
+        #[derive(Debug, Pkl)]
         struct Test {
             foo: i64,
             bar: i32,
@@ -198,7 +194,7 @@ mod tests {
 
         let evaluator = eval.new_evaluator(None).expect("Failed to create a new evaluator");
 
-        let test: Test = eval.evaluate_module::<Test>("file:///home/stormblessed/Code/pkl-rust/src/evaluator/tests/test.pkl".into(), evaluator).expect("Failed to obtain result");
+        let test: Test = eval.evaluate_module::<Test>("file:///home/stormblessed/Code/pkl-rust/pkl-bind/src/evaluator/tests/test.pkl".into(), evaluator).expect("Failed to obtain result");
 
         assert_eq!(test.foo, 1);
         assert_eq!(test.bar, 2);

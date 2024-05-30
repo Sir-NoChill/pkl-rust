@@ -34,7 +34,7 @@
 //! Currently, the generation of the binding module is in the works,
 //! however carefully crafting both your .pkl file and your rust data structure
 //! will yeild the correct results. The target project structure is as follows:
-//! ```norun
+//! ```ignore
 //! ProjectDir
 //! ├── PklDir
 //! └── src

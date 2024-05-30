@@ -14,7 +14,7 @@ use super::msg_api::{incoming::*, outgoing::*, code::*};
 /// When we instantiate an EvaluatorManagerExec, we spawn a pkl process
 /// and then communicate to it via message passing with two threads
 /// handling the incoming and outgoing messages respectively.
-///```no_run
+/// ```ignore
 ///   pkl-rust           pkl
 ///      |  get version
 ///      |--------------->|
@@ -34,7 +34,7 @@ use super::msg_api::{incoming::*, outgoing::*, code::*};
 ///      |
 ///      ...
 ///      user program
-///```
+/// ```
 ///
 #[derive(Debug)]
 pub struct Executor {

@@ -58,7 +58,7 @@ pub fn file_source(path: PathBuf) -> ModuleSource {
 /// # Example
 ///
 /// ```
-/// use pkl_rust::evaluator::module_source::text_source;
+/// use pkl_bind::evaluator::module_source::text_source;
 ///
 /// let pkl = text_source("Attribute = 1".into());
 /// assert_eq!(pkl.uri().scheme(), "repl");
@@ -73,7 +73,7 @@ pub fn text_source(text: String) -> ModuleSource {
 /// # Example
 ///
 /// ```
-/// use pkl_rust::evaluator::module_source::uri_source;
+/// use pkl_bind::evaluator::module_source::uri_source;
 /// use url::Url;
 ///
 /// let pkl = uri_source(Url::parse("file:/test/pkl.pkl").unwrap());
