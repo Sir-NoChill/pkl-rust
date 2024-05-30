@@ -1,4 +1,3 @@
-#![allow(nonstandard_style)] // for compatibililty with pkl messages
 use std::collections::HashMap;
 
 use rmp_serde as rmps;
@@ -59,87 +58,95 @@ impl Serialize for OutgoingMessage {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ModuleReader {
     pub scheme: String,
-    pub hasHierarchicalUris: bool,
-    pub isGlobbable: bool,
-    pub isLocal: bool,
+    pub has_hierarchical_uris: bool,
+    pub is_globbable: bool,
+    pub is_local: bool,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ResourceReader {
     pub scheme: String,
-    pub hasHierarchicalUris: bool,
-    pub isGlobbable: bool,
+    pub has_hierarchical_uris: bool,
+    pub is_globbable: bool,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Checksums {
     pub checksums: String,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProjectOrDependency {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub packageUri: Option<String>,
+    pub package_uri: Option<String>,
     pub r#type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub projectFileUri: Option<String>,
+    pub project_file_uri: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub checksums: Option<Checksums>,
     pub dependencies: HashMap<String, ProjectOrDependency>,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateEvaluator {
-    pub requestId: i64,
+    pub request_id: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub clientResourceReaders: Option<Vec<ResourceReader>>,
+    pub client_resource_readers: Option<Vec<ResourceReader>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub clientModuleReaders: Option<Vec<ModuleReader>>,
+    pub client_module_readers: Option<Vec<ModuleReader>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub modulePaths: Option<Vec<String>>,
+    pub module_paths: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub env: Option<HashMap<String, String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub properties: Option<HashMap<String, String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub outputFormat: Option<String>,
+    pub output_format: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub allowedModules: Option<Vec<String>>,
+    pub allowed_modules: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub allowedResources: Option<Vec<String>>,
+    pub allowed_resources: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub rootDir: Option<String>,
+    pub root_dir: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub cacheDir: Option<String>,
+    pub cache_dir: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub project: Option<ProjectOrDependency>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub timeoutSeconds: Option<i64>,
+    pub timeout_seconds: Option<i64>,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CloseEvaluator {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub evaluatorId: Option<i64>,
+    pub evaluator_id: Option<i64>,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Evaluate {
-    pub requestId: i64,
-    pub evaluatorId: i64,
-    pub moduleUri: String,
+    pub request_id: i64,
+    pub evaluator_id: i64,
+    pub module_uri: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub moduleText: Option<String>,
+    pub module_text: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expr: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ReadResourceResponse {
-    pub requestId: i64,
-    pub evaluatorId: i64,
+    pub request_id: i64,
+    pub evaluator_id: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub contents: Option<Vec<u8>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -147,9 +154,10 @@ pub struct ReadResourceResponse {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ReadModuleResponse {
-    pub requestId: i64,
-    pub evaluatorId: i64,
+    pub request_id: i64,
+    pub evaluator_id: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub contents: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -157,28 +165,31 @@ pub struct ReadModuleResponse {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ListResourceResponse {
-    pub requestId: i64,
-    pub evaluatorId: i64,
+    pub request_id: i64,
+    pub evaluator_id: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub pathElements: Option<Vec<PathElement>>,
+    pub path_elements: Option<Vec<PathElement>>,
     pub error: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ListModulesResponse {
-    pub requestId: i64,
-    pub evaluatorId: i64,
+    pub request_id: i64,
+    pub evaluator_id: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub pathElements: Option<Vec<PathElement>>,
+    pub path_elements: Option<Vec<PathElement>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PathElement {
     pub name: String,
-    pub isDirectory: bool,
+    pub is_directory: bool,
 }
 
 #[cfg(test)]
@@ -202,8 +213,8 @@ mod tests {
     ///   }
     /// ]
     fn test_pack_message_specification_1() {
-        let pe = PathElement{name: "foo.pkl".into(), isDirectory: false};
-        let mr = ListModulesResponse{requestId: -647892, evaluatorId: -13901, pathElements: vec![pe].into(), error: None};
+        let pe = PathElement{name: "foo.pkl".into(), is_directory: false};
+        let mr = ListModulesResponse{request_id: -647892, evaluator_id: -13901, path_elements: vec![pe].into(), error: None};
 
         let mp = pack_message(OutgoingMessage::ListModulesResponse(mr)).unwrap();
         let expected = vec![0x92, 0x2D, 0x83, 0xA9, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x49, 0x64, 0xD2, 0xFF, 0xF6, 0x1D, 0x2C, 0xAB, 0x65, 0x76, 0x61, 0x6C, 0x75, 0x61, 0x74, 0x6F, 0x72, 0x49, 0x64, 0xD1, 0xC9, 0xB3, 0xAC, 0x70, 0x61, 0x74, 0x68, 0x45, 0x6C, 0x65, 0x6D, 0x65, 0x6E, 0x74, 0x73, 0x91, 0x82, 0xA4, 0x6E, 0x61, 0x6D, 0x65, 0xA7, 0x66, 0x6F, 0x6F, 0x2E, 0x70, 0x6B, 0x6C, 0xAB, 0x69, 0x73, 0x44, 0x69, 0x72, 0x65, 0x63, 0x74, 0x6F, 0x72, 0x79, 0xC2];

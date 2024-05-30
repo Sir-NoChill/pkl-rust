@@ -1,5 +1,3 @@
-#![allow(nonstandard_style)]
-
 use rmp_serde as rmps;
 
 use rmps::from_slice;
@@ -79,9 +77,10 @@ impl IncomingMessage {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateEvaluatorResponse {
-    pub requestId: i64,
-    pub evaluatorId: Option<i64>, // if None, then error is Some(errmsg)
+    pub request_id: i64,
+    pub evaluator_id: Option<i64>, // if None, then error is Some(errmsg)
     pub error: Option<String>,
 }
 impl DeserializableMessage for CreateEvaluatorResponse {
@@ -96,48 +95,54 @@ impl DeserializableMessage for CreateEvaluatorResponse {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct EvaluateResponse {
-    pub requestId: i64,
-    pub evaluatorId: i64,
+    pub request_id: i64,
+    pub evaluator_id: i64,
     pub result: Option<Vec<u8>>,
     pub error: Option<String>,
 }
 
 
 #[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ReadResource {
-    pub requestId: i64,
-    pub evaluatorId: i64,
+    pub request_id: i64,
+    pub evaluator_id: i64,
     pub uri: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ReadModule {
-    pub requestId: i64,
-    pub evaluatorId: i64,
+    pub request_id: i64,
+    pub evaluator_id: i64,
     pub uri: String
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ListResources {
-    pub requestId: i64,
-    pub evaluatorId: i64,
+    pub request_id: i64,
+    pub evaluator_id: i64,
     pub uri: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ListModules {
-    pub requestId: i64,
-    pub evaluatorId: i64,
+    pub request_id: i64,
+    pub evaluator_id: i64,
     pub uri: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Log {
-    pub evaluatorId: i64,
+    pub evaluator_id: i64,
     pub level: i8,
     pub message: String,
-    pub frameUri: String,
+    pub frame_uri: String,
 }
 
 
@@ -159,8 +164,8 @@ mod tests {
 
         println!("Result of Deserialization: {:?}", res);
         assert_eq!(code, 0x21);
-        assert_eq!(elem.requestId, 135);
-        assert_eq!(elem.evaluatorId, Some(-135901));
+        assert_eq!(elem.request_id, 135);
+        assert_eq!(elem.evaluator_id, Some(-135901));
         assert_eq!(elem.error, None);
 
         let eval_null = vec![0x92, 0x21, 0x82, 0xA9, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73,
@@ -175,8 +180,8 @@ mod tests {
 
         println!("Result of Deserialization: {:?}", res);
         assert_eq!(code2, 0x21);
-        assert_eq!(elem2.requestId, 135);
-        assert_eq!(elem2.evaluatorId, Some(-135901));
+        assert_eq!(elem2.request_id, 135);
+        assert_eq!(elem2.evaluator_id, Some(-135901));
         assert_eq!(elem2.error, None);
     }
 }
