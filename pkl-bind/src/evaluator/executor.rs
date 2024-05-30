@@ -214,24 +214,24 @@ mod tests {
         let allowed_modules: Vec<String> = vec!["pkl:".into(), "repl:".into(), "file:".into(), "customfs:".into()];
         let resource_reader = vec![ResourceReader {
             scheme: "customfs".into(),
-            hasHierarchicalUris: true,
-            isGlobbable: true,
+            has_hierarchical_uris: true,
+            is_globbable: true,
         }];
 
         let create_eval = CreateEvaluator {
-            requestId: 135,
-            clientResourceReaders: Some(resource_reader),
-            allowedModules: Some(allowed_modules),
-            clientModuleReaders: None,
-            modulePaths: None,
+            request_id: 135,
+            client_resource_readers: Some(resource_reader),
+            allowed_modules: Some(allowed_modules),
+            client_module_readers: None,
+            module_paths: None,
             env: None,
             properties: None,
-            outputFormat: None,
-            allowedResources: None,
-            rootDir: None,
-            cacheDir: None,
+            output_format: None,
+            allowed_resources: None,
+            root_dir: None,
+            cache_dir: None,
             project: None,
-            timeoutSeconds: None,
+            timeout_seconds: None,
         };
 
         let test1 = pack_message(OutgoingMessage::CreateEvaluator(create_eval)).expect("Failed to pack");
@@ -252,24 +252,24 @@ mod tests {
         let allowed_modules: Vec<String> = vec!["pkl:".into(), "repl:".into(), "file:".into(), "customfs:".into()];
         let resource_reader = vec![ResourceReader {
             scheme: "customfs".into(),
-            hasHierarchicalUris: true,
-            isGlobbable: true,
+            has_hierarchical_uris: true,
+            is_globbable: true,
         }];
 
         let create_eval = CreateEvaluator {
-            requestId: 135,
-            clientResourceReaders: Some(resource_reader),
-            allowedModules: Some(allowed_modules),
-            clientModuleReaders: None,
-            modulePaths: None,
+            request_id: 135,
+            client_resource_readers: Some(resource_reader),
+            allowed_modules: Some(allowed_modules),
+            client_module_readers: None,
+            module_paths: None,
             env: None,
             properties: None,
-            outputFormat: None,
-            allowedResources: None,
-            rootDir: None,
-            cacheDir: None,
+            output_format: None,
+            allowed_resources: None,
+            root_dir: None,
+            cache_dir: None,
             project: None,
-            timeoutSeconds: None,
+            timeout_seconds: None,
         };
 
         // print_binary(&pack_message(OutgoingMessage::CreateEvaluator(create_eval)).expect("failed"));

@@ -59,10 +59,10 @@ impl EvaluatorMethods for Evaluator {
         let (send, recv) = channel::<IncomingMessage>();
 
         let msg = Evaluate {
-            requestId: request_id,
-            evaluatorId: self.evaluator_id,
-            moduleUri: source.uri().to_string(),
-            moduleText: source.contents().clone(), //FIXME badness
+            request_id,
+            evaluator_id: self.evaluator_id,
+            module_uri: source.uri().to_string(),
+            module_text: source.contents().clone(), //FIXME badness
             expr,
         };
         todo!()

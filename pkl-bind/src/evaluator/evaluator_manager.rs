@@ -33,19 +33,19 @@ impl EvaluatorManager {
         };
 
         let message_data = CreateEvaluator {
-            requestId: rand::random(),
-            clientResourceReaders: None,
-            clientModuleReaders: None,
-            modulePaths: None,
+            request_id: rand::random(),
+            client_resource_readers: None,
+            client_module_readers: None,
+            module_paths: None,
             env: None,
             properties: None,
-            outputFormat: None,
-            allowedModules: Some(opts.allowed_modules.clone()),
-            allowedResources: Some(opts.allowed_resources.clone()),
-            rootDir: None,
-            cacheDir: Some(opts.cache_dir.to_str().unwrap().to_string()), //TODO error
+            output_format: None,
+            allowed_modules: Some(opts.allowed_modules.clone()),
+            allowed_resources: Some(opts.allowed_resources.clone()),
+            root_dir: None,
+            cache_dir: Some(opts.cache_dir.to_str().unwrap().to_string()), //TODO error
             project: None,
-            timeoutSeconds: None,
+            timeout_seconds: None,
         };
 
         let eval_resp = match self.exec.senrec(OutgoingMessage::CreateEvaluator(message_data)).expect("Failed to send message") {
@@ -54,7 +54,7 @@ impl EvaluatorManager {
         };
 
         let evaluator = Evaluator {
-            evaluator_id: eval_resp.evaluatorId.unwrap(), // if we did not error, then this is guaranteed
+            evaluator_id: eval_resp.evaluator_id.unwrap(), // if we did not error, then this is guaranteed
             logger: Default::default(),
             // manager: Some(Rc::new(self)), // FIXME see Evaluator.rs
             pending_requests: Default::default(),
@@ -78,10 +78,10 @@ impl EvaluatorManager {
     fn evaluate_module<T: for<'a> Deserialize<'a>>(&mut self, file: String, id_number: i64) -> Result<T, &'static str> {
         // send the evaluate request
         let eval_req = Evaluate {
-            requestId: rand::random::<i64>(),
-            evaluatorId: id_number,
-            moduleUri: file.clone(),
-            moduleText: None,
+            request_id: rand::random::<i64>(),
+            evaluator_id: id_number,
+            module_uri: file.clone(),
+            module_text: None,
             expr: None,
         };
 
@@ -92,7 +92,7 @@ impl EvaluatorManager {
             match &mut resp {
                 IncomingMessage::EvaluateResponse(x) => {
                     let close_msg = CloseEvaluator {
-                        evaluatorId: Some(id_number.clone()),
+                        evaluator_id: Some(id_number.clone()),
                     };
 
                     self.exec.send(OutgoingMessage::CloseEvaluator(close_msg));
@@ -135,9 +135,9 @@ impl EvaluatorManager {
                     // }
 
                     let list_resp = ListModulesResponse{
-                        requestId: x.requestId,
-                        evaluatorId: id_number.clone(),
-                        pathElements: Some(modules),
+                        request_id: x.request_id,
+                        evaluator_id: id_number.clone(),
+                        path_elements: Some(modules),
                         error: None,
                     };
 
@@ -159,7 +159,7 @@ impl Drop for EvaluatorManager {
     fn drop(&mut self) {
         for evaluator in &self.evaluators {
             let msg = CloseEvaluator {
-                evaluatorId: Some(evaluator.evaluator_id),
+                evaluator_id: Some(evaluator.evaluator_id),
             };
             self.exec.send(OutgoingMessage::CloseEvaluator(msg));
             // evaluator.close();
