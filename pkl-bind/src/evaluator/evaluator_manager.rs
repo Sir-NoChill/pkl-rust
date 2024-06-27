@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::evaluator::decoder::Pkl;
+use crate::{evaluator::decoder::Pkl, log, plog};
 
 use super::{evaluator::Evaluator, evaluator_options::EvaluatorOptions, msg_api::{incoming::IncomingMessage, outgoing::{OutgoingMessage, CreateEvaluator, CloseEvaluator, Evaluate, ListModulesResponse, PathElement}}};
 use super::executor::Executor;
@@ -54,7 +54,6 @@ impl EvaluatorManager {
 
         let evaluator = Evaluator {
             evaluator_id: eval_resp.evaluator_id.unwrap(), // if we did not error, then this is guaranteed
-            logger: Default::default(),
             // manager: Some(Rc::new(self)), // FIXME see Evaluator.rs
             pending_requests: Default::default(),
             closed: false,
@@ -97,23 +96,23 @@ impl EvaluatorManager {
                     self.exec.send(OutgoingMessage::CloseEvaluator(close_msg));
                     //TODO get the data and decode
 
-                    println!("Data: {:?}", x);
+                    log!(1, "Data: {:?}", x);
                     let data = x.clone().result.expect("failed to get result");
 
                     // FIXME fails to decode, need to unmarshal data
-                    print!("Data: ");
+                    log!(1, "Data: ");
                     for d in &data {
-                        print!("{:#04X}, ", d);
+                        plog!(1, "{:#04X}, ", d);
                     }
-                    println!();
+                    log!(1, "");
 
                     let res = T::unmarshal(data);
-                    println!("Res: {:?}", res);
+                    log!(1, "Res: {:?}", res);
                     return res;
                 },
-                IncomingMessage::ReadResource(x) => todo!(),
-                IncomingMessage::ReadModule(x) => todo!(),
-                IncomingMessage::ListResources(x) => todo!(),
+                IncomingMessage::ReadResource(_x) => todo!(),
+                IncomingMessage::ReadModule(_x) => todo!(),
+                IncomingMessage::ListResources(_x) => todo!(),
                 IncomingMessage::ListModules(x) => {
                     // get all the files in the module:
                     let path = PathBuf::from(file.clone());
@@ -122,7 +121,7 @@ impl EvaluatorManager {
                         // files = std::fs::read_dir(path); // TODO
                     }
 
-                    let mut modules: Vec<PathElement> = vec![];
+                    let /*mut*/ modules: Vec<PathElement> = vec![];
                     // for file in files {
                     //     // TODO make module
                     // }
@@ -134,7 +133,7 @@ impl EvaluatorManager {
                         error: None,
                     };
 
-                    let resp = self.exec.senrec(OutgoingMessage::ListModulesResponse(list_resp)).expect("Failed to send/receive data");
+                    let _resp = self.exec.senrec(OutgoingMessage::ListModulesResponse(list_resp)).expect("Failed to send/receive data");
 
                 },
                 IncomingMessage::Log(_) => todo!(),
@@ -145,10 +144,6 @@ impl EvaluatorManager {
         // send the any required list_moduels response
         // send any read_module_response
         // send the close evaluator
-    }
-
-    pub fn create_evaluator(&self, none: Option<()>) -> i64 {
-        todo!()
     }
 }
 
@@ -170,7 +165,7 @@ impl Drop for EvaluatorManager {
 #[cfg(test)]
 mod tests {
     use pkl_derive::Pkl;
-    use crate::evaluator::decoder::Pkl;
+    use crate::evaluator::{decoder::Pkl, module_source::file_source};
 
     use super::*;
 
@@ -194,8 +189,7 @@ mod tests {
 
         let evaluator = eval.new_evaluator(None).expect("Failed to create a new evaluator");
 
-        //TODO remove my paths
-        let test: Test = eval.evaluate_module::<Test>("file:///home/stormblessed/Code/pkl-rust/pkl-bind/src/evaluator/tests/test.pkl".into(), evaluator).expect("Failed to obtain result");
+        let test: Test = eval.evaluate_module::<Test>(file_source("src/evaluator/tests/test.pkl".into()).uri().to_string(), evaluator).expect("Failed to obtain result");
 
         assert_eq!(test.foo, 1);
         assert_eq!(test.bar, 2);

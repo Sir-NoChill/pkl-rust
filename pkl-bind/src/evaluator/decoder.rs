@@ -1,4 +1,3 @@
-
 /// Derive trait for unmarshalling data from the PKL
 /// binary format as described
 /// [here](https://pkl-lang.org/main/current/bindings-specification/binary-encoding.html).
@@ -13,6 +12,8 @@ pub trait Pkl {
 #[cfg(test)]
 mod tests {
     use pkl_derive::Pkl;
+
+    use crate::log;
 
     use super::*;
 
@@ -37,6 +38,6 @@ mod tests {
         let test = Test::unmarshal(data).unwrap();
         assert_eq!(test.foo, 1);
         assert_eq!(test.bar, 2);
-        println!("Unmarshalled: {:?}", test);
+        log!(1, "Unmarshalled: {:?}", test);
     }
 }

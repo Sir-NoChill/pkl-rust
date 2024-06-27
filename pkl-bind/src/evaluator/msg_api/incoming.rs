@@ -148,6 +148,8 @@ pub struct Log {
 
 #[cfg(test)]
 mod tests {
+    use crate::log;
+
     use super::*;
 
     #[test]
@@ -162,7 +164,7 @@ mod tests {
         let code = res.0.clone();
         let elem = res.1.clone();
 
-        println!("Result of Deserialization: {:?}", res);
+        log!(1, "Result of Deserialization: {:?}", res);
         assert_eq!(code, 0x21);
         assert_eq!(elem.request_id, 135);
         assert_eq!(elem.evaluator_id, Some(-135901));
@@ -178,7 +180,7 @@ mod tests {
         let code2 = res.0.clone();
         let elem2 = res.1.clone();
 
-        println!("Result of Deserialization: {:?}", res);
+        log!(1, "Result of Deserialization: {:?}", res);
         assert_eq!(code2, 0x21);
         assert_eq!(elem2.request_id, 135);
         assert_eq!(elem2.evaluator_id, Some(-135901));

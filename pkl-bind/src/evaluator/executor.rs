@@ -1,6 +1,6 @@
-use std::{process::{Command, Child, Stdio, ChildStdin, ChildStdout}, sync::{mpsc::{Sender, Receiver, channel, RecvError}, atomic::AtomicBool}, os::unix::process::CommandExt, io::{Write, BufReader, BufWriter, Read}, cmp::Reverse, thread::{self, JoinHandle}, time::{Duration, Instant}};
+use std::{process::{Command, Child, Stdio, ChildStdin, ChildStdout}, sync::mpsc::RecvError, io::{Write, Read}};
 
-use serde::Serialize;
+use crate::log;
 
 use super::msg_api::{incoming::*, outgoing::*, code::*};
 
@@ -102,7 +102,7 @@ impl Executor {
         let mut sender = self.child_in.take().expect("Failed to take");
 
         sender.write_all(&message).expect("Failed to send message");
-        // println!("Sent message: {:?}", msg);
+        // log!(1,"Sent message: {:?}", msg);
 
         self.child_in = Some(sender);
     }
@@ -122,45 +122,45 @@ impl Executor {
         // TODO not very DRY, but this might be the most idiomatic way to use serde
         match prefix {
             MessageCode::NewEvaluatorResponse => {
-                println!("Matched new evaluator, Code: {:02X?}", prefix); //TODO Switch to logging
+                log!(1,"Matched new evaluator, Code: {:02X?}", prefix); //TODO Switch to logging
                 match rmp_serde::from_read::<_, CreateEvaluatorResponse>(&mut out) {
                     Ok(msg) => value = Some(IncomingMessage::CreateEvaluatorResponse(msg)),
-                    Err(err) => eprintln!("Error decoding the message: {}", err),
+                    Err(err) => log!(1,"Error decoding the message: {}", err),
                 }
             },
             MessageCode::EvaluateResponse => {
-                println!("Matched new evaluator, Code: {:02X?}", prefix);
+                log!(1,"Matched new evaluator, Code: {:02X?}", prefix);
                 match rmp_serde::from_read::<_, EvaluateResponse>(&mut out) {
                     Ok(msg) => value = Some(IncomingMessage::EvaluateResponse(msg)),
-                    Err(err) => eprintln!("Error decoding the message: {}", err),
+                    Err(err) => log!(1,"Error decoding the message: {}", err),
                 }
             },
             MessageCode::EvaluateReadModule => {
-                println!("Matched new evaluator, Code: {:02X?}", prefix);
+                log!(1,"Matched new evaluator, Code: {:02X?}", prefix);
                 match rmp_serde::from_read::<_, ReadModule>(&mut out) {
                     Ok(msg) => value = Some(IncomingMessage::ReadModule(msg)),
-                    Err(err) => eprintln!("Error decoding the message: {}", err),
+                    Err(err) => log!(1,"Error decoding the message: {}", err),
                 }
             },
             MessageCode::ListResourcesRequest => {
-                println!("Matched new evaluator, Code: {:02X?}", prefix);
+                log!(1,"Matched new evaluator, Code: {:02X?}", prefix);
                 match rmp_serde::from_read::<_, ListResources>(&mut out) {
                     Ok(msg) => value = Some(IncomingMessage::ListResources(msg)),
-                    Err(err) => eprintln!("Error decoding the message: {}", err),
+                    Err(err) => log!(1,"Error decoding the message: {}", err),
                 }
             },
             MessageCode::ListModulesRequest => {
-                println!("Matched new evaluator, Code: {:02X?}", prefix);
+                log!(1,"Matched new evaluator, Code: {:02X?}", prefix);
                 match rmp_serde::from_read::<_, ListModules>(&mut out) {
                     Ok(msg) => value = Some(IncomingMessage::ListModules(msg)),
-                    Err(err) => eprintln!("Error decoding the message: {}", err),
+                    Err(err) => log!(1,"Error decoding the message: {}", err),
                 }
             },
             MessageCode::EvaluateLog => {
-                println!("Matched new evaluator, Code: {:02X?}", prefix);
+                log!(1,"Matched new evaluator, Code: {:02X?}", prefix);
                 match rmp_serde::from_read::<_, Log>(&mut out) {
                     Ok(msg) => value = Some(IncomingMessage::Log(msg)),
-                    Err(err) => eprintln!("Error decoding the message: {}", err),
+                    Err(err) => log!(1,"Error decoding the message: {}", err),
                 }
             },
             _ => {
@@ -200,7 +200,7 @@ mod tests {
         for i in vec {
             print!("0x{i:02X}, ");
         }
-        println!("]");
+        log!(1,"]");
 
     }
 
@@ -237,7 +237,7 @@ mod tests {
         let test1 = pack_message(OutgoingMessage::CreateEvaluator(create_eval)).expect("Failed to pack");
 
         let _ = eval.child_in.take().unwrap().write(&test1.to_vec());
-        // println!("Wrote message: {:?}", &test1.to_vec());
+        // log!(1,"Wrote message: {:?}", &test1.to_vec());
         // print_binary(&test1.to_vec());
         let a = eval.child_out.take().unwrap().read_exact(&mut r);
         // print_binary(&r);
@@ -276,7 +276,7 @@ mod tests {
         // print_binary(&test1);
 
         let result = eval.senrec(OutgoingMessage::CreateEvaluator(create_eval)).expect("Failed to accept");
-        println!("Received evaluator response: {:?}", result);
+        log!(1,"Received evaluator response: {:?}", result);
     }
 
 }

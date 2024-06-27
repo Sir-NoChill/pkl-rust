@@ -1,50 +1,92 @@
-use std::io::{self, Write};
-
-#[derive(Default)]
-pub enum Logger {
-    #[default] StderrLogger,
-}
-
-#[derive(Default)]
-struct StderrLogger {}
-
-trait LoggerImpl {
-    fn trace(message: String, frame_uri: String) -> std::io::Result<()>;
-    fn warn(message: String, frame_uri: String) -> std::io::Result<()>;
-}
-
-impl Logger {
-    pub fn trace(&self, message: String, frame_uri: String) {
-        match self {
-            Logger::StderrLogger => StderrLogger::trace(message, frame_uri).expect("Encountered an IO error in StderrLogger::trace()"),
+/// Provides logging support for the pkl library
+/// dependent on the environment variable `PKL_DEBUG`.
+/// If `PKL_DEBUG=1` then more verbose logging is enabled.
+/// without, we still print trace data.
+#[macro_export]
+macro_rules! log {
+    // NOTE: this uses a variadic argument system
+    // copied from the std::fmt eprintln! macro
+    // see the appropriate documentation
+    ($l:expr, $($arg:tt)*) => {{
+        let key = "PKL_DEBUG";
+        match std::env::var(key) {
+            Ok(val) => {
+                match val.parse::<i32>() {
+                    Ok(v) => {
+                        if v >= $l {
+                            eprintln!($($arg)*);
+                        }
+                    },
+                    Err(_) => {
+                        if $l == 0 {
+                            eprintln!($($arg)*);
+                        }
+                    }
+                }
+            },
+            Err(_) => {
+                if $l == 0 {
+                    eprintln!($($arg)*);
+                }
+            },
         }
-    }
-
-    pub fn warn(&self, message: String, frame_uri: String) {
-        match self {
-            Logger::StderrLogger => StderrLogger::warn(message, frame_uri).expect("Encountered an IO error in StderrLogger::warn()"),
-        }
-    }
+    }};
 }
 
-impl LoggerImpl for StderrLogger {
-    fn trace(message: String, frame_uri: String) -> std::io::Result<()> {
-        let stderr = io::stderr();
-        let mut handle = stderr.lock();
+#[macro_export]
+macro_rules! plog {
+    // NOTE: this uses a variadic argument system
+    // copied from the std::fmt eprintln! macro
+    // see the appropriate documentation
+    ($l:expr, $($arg:tt)*) => {{
+        let key = "PKL_DEBUG";
+        match std::env::var(key) {
+            Ok(val) => {
+                match val.parse::<i32>() {
+                    Ok(v) => {
+                        if v >= $l {
+                            eprint!($($arg)*);
+                        }
+                    },
+                    Err(_) => {
+                        if $l == 0 {
+                            eprint!($($arg)*);
+                        }
+                    }
+                }
+            },
+            Err(_) => {
+                if $l == 0 {
+                    eprint!($($arg)*);
+                }
+            },
+        }
+    }};
+}
 
-        let s: String = format!("TRACE: {} {}", message, frame_uri);
-
-        write!(handle, "{}", s)?;
-        Ok(())
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_name() {
+        log!(1, "this is an unprinted {}", "test");
     }
 
-    fn warn(message: String, frame_uri: String) -> std::io::Result<()> {
-        let stderr = io::stderr();
-        let mut handle = stderr.lock();
+    #[test]
+    fn test_env_set() {
+        std::env::set_var("PKL_DEBUG", "1");
 
-        let s: String = format!("WARN: {} {}", message, frame_uri);
+        log!(1, "this is a {} test", "printed");
+    }
 
-        write!(handle, "{}", s)?;
-        Ok(())
+    #[test]
+    fn test_env_set_no_print() {
+        std::env::set_var("PKL_DEBUG", "0");
+
+        log!(1, "this is still not to print");
+    }
+
+    #[test]
+    fn test_printed_log() {
+        log!(0, "This should print");
     }
 }
