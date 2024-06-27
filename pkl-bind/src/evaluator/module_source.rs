@@ -2,6 +2,8 @@ use std::{env::current_dir, path::PathBuf};
 
 use url::Url;
 
+use crate::log;
+
 
 /// Represents a source for Pkl evaluation
 pub struct ModuleSource {
@@ -42,7 +44,7 @@ pub fn file_source(path: PathBuf) -> ModuleSource {
     if !path.is_absolute() {
         let pwd: PathBuf = current_dir().expect("Failed to resolve current working dir");
         result = pwd.join(&path);
-        println!("Absolute path: {:?}", result);
+        log!(1, "Absolute path: {:?}", result);
     } else {
         result = path;
     }

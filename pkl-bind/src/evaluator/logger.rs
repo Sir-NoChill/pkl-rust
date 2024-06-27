@@ -33,6 +33,37 @@ macro_rules! log {
     }};
 }
 
+#[macro_export]
+macro_rules! plog {
+    // NOTE: this uses a variadic argument system
+    // copied from the std::fmt eprintln! macro
+    // see the appropriate documentation
+    ($l:expr, $($arg:tt)*) => {{
+        let key = "PKL_DEBUG";
+        match std::env::var(key) {
+            Ok(val) => {
+                match val.parse::<i32>() {
+                    Ok(v) => {
+                        if v >= $l {
+                            eprint!($($arg)*);
+                        }
+                    },
+                    Err(_) => {
+                        if $l == 0 {
+                            eprint!($($arg)*);
+                        }
+                    }
+                }
+            },
+            Err(_) => {
+                if $l == 0 {
+                    eprint!($($arg)*);
+                }
+            },
+        }
+    }};
+}
+
 #[cfg(test)]
 mod tests {
     #[test]

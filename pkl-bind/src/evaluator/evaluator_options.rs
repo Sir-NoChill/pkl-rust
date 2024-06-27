@@ -2,7 +2,7 @@ use std::{collections::HashMap, path::PathBuf};
 use dirs::home_dir;
 use std::env;
 
-use super::{msg_api::outgoing::{ResourceReader, ModuleReader}, logger::Logger};
+use super::msg_api::outgoing::{ResourceReader, ModuleReader};
 
 //TODO documentation
 //TODO this should be taken from a pkl file in the future
@@ -10,7 +10,6 @@ pub struct EvaluatorOptions {
     pub properties: HashMap<String, String>,
     pub env: HashMap<String, String>,
     pub module_paths: Vec<String>,
-    pub logger: Logger,
     pub output_format: String,
     pub allowed_modules: Vec<String>,
     pub allowed_resources: Vec<String>,
@@ -48,7 +47,6 @@ impl Default for EvaluatorOptions {
             properties: Default::default(),
             env: os_env,
             module_paths: Default::default(),
-            logger: Default::default(),
             output_format: Default::default(),
             allowed_modules,
             allowed_resources,
@@ -87,8 +85,6 @@ mod tests {
 
     #[test]
     fn default_options_test() {
-        let defaults: EvaluatorOptions = Default::default();
-
-        defaults.logger.trace("hello, ".into(), "world".into());
+        let _defaults: EvaluatorOptions = Default::default();
     }
 }

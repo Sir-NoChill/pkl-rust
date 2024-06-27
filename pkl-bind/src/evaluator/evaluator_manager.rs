@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::evaluator::decoder::Pkl;
+use crate::{evaluator::decoder::Pkl, log, plog};
 
 use super::{evaluator::Evaluator, evaluator_options::EvaluatorOptions, msg_api::{incoming::IncomingMessage, outgoing::{OutgoingMessage, CreateEvaluator, CloseEvaluator, Evaluate, ListModulesResponse, PathElement}}};
 use super::executor::Executor;
@@ -54,7 +54,6 @@ impl EvaluatorManager {
 
         let evaluator = Evaluator {
             evaluator_id: eval_resp.evaluator_id.unwrap(), // if we did not error, then this is guaranteed
-            logger: Default::default(),
             // manager: Some(Rc::new(self)), // FIXME see Evaluator.rs
             pending_requests: Default::default(),
             closed: false,
@@ -97,18 +96,18 @@ impl EvaluatorManager {
                     self.exec.send(OutgoingMessage::CloseEvaluator(close_msg));
                     //TODO get the data and decode
 
-                    println!("Data: {:?}", x);
+                    log!(1, "Data: {:?}", x);
                     let data = x.clone().result.expect("failed to get result");
 
                     // FIXME fails to decode, need to unmarshal data
-                    print!("Data: ");
+                    log!(1, "Data: ");
                     for d in &data {
-                        print!("{:#04X}, ", d);
+                        plog!(1, "{:#04X}, ", d);
                     }
-                    println!();
+                    log!(1, "");
 
                     let res = T::unmarshal(data);
-                    println!("Res: {:?}", res);
+                    log!(1, "Res: {:?}", res);
                     return res;
                 },
                 IncomingMessage::ReadResource(_x) => todo!(),
@@ -190,7 +189,6 @@ mod tests {
 
         let evaluator = eval.new_evaluator(None).expect("Failed to create a new evaluator");
 
-        //TODO remove my paths
         let test: Test = eval.evaluate_module::<Test>(file_source("src/evaluator/tests/test.pkl".into()).uri().to_string(), evaluator).expect("Failed to obtain result");
 
         assert_eq!(test.foo, 1);

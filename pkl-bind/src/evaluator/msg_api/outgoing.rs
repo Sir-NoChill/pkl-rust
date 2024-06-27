@@ -205,6 +205,8 @@ pub struct PathElement {
 
 #[cfg(test)]
 mod tests {
+    use crate::log;
+
     use super::*;
 
     #[test]
@@ -237,7 +239,7 @@ mod tests {
                             0x6C, 0xAB, 0x69, 0x73, 0x44, 0x69, 0x72, 0x65, 0x63, 0x74,
                             0x6F, 0x72, 0x79, 0xC2];
 
-        println!("Serialized: {:X?}", mp);
+        log!(1, "Serialized: {:X?}", mp);
 
         assert_eq!(mp, expected);
     }

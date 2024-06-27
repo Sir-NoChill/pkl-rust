@@ -13,6 +13,8 @@ pub trait Pkl {
 mod tests {
     use pkl_derive::Pkl;
 
+    use crate::log;
+
     use super::*;
 
     #[test]
@@ -36,6 +38,6 @@ mod tests {
         let test = Test::unmarshal(data).unwrap();
         assert_eq!(test.foo, 1);
         assert_eq!(test.bar, 2);
-        println!("Unmarshalled: {:?}", test);
+        log!(1, "Unmarshalled: {:?}", test);
     }
 }
