@@ -1,6 +1,4 @@
-use std::{process::{Command, Child, Stdio, ChildStdin, ChildStdout}, sync::{mpsc::{Sender, Receiver, channel, RecvError}, atomic::AtomicBool}, os::unix::process::CommandExt, io::{Write, BufReader, BufWriter, Read}, cmp::Reverse, thread::{self, JoinHandle}, time::{Duration, Instant}};
-
-use serde::Serialize;
+use std::{process::{Command, Child, Stdio, ChildStdin, ChildStdout}, sync::mpsc::RecvError, io::{Write, Read}};
 
 use super::msg_api::{incoming::*, outgoing::*, code::*};
 

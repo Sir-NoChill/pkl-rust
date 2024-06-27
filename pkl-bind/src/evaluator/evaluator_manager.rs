@@ -111,9 +111,9 @@ impl EvaluatorManager {
                     println!("Res: {:?}", res);
                     return res;
                 },
-                IncomingMessage::ReadResource(x) => todo!(),
-                IncomingMessage::ReadModule(x) => todo!(),
-                IncomingMessage::ListResources(x) => todo!(),
+                IncomingMessage::ReadResource(_x) => todo!(),
+                IncomingMessage::ReadModule(_x) => todo!(),
+                IncomingMessage::ListResources(_x) => todo!(),
                 IncomingMessage::ListModules(x) => {
                     // get all the files in the module:
                     let path = PathBuf::from(file.clone());
@@ -122,7 +122,7 @@ impl EvaluatorManager {
                         // files = std::fs::read_dir(path); // TODO
                     }
 
-                    let mut modules: Vec<PathElement> = vec![];
+                    let /*mut*/ modules: Vec<PathElement> = vec![];
                     // for file in files {
                     //     // TODO make module
                     // }
@@ -134,7 +134,7 @@ impl EvaluatorManager {
                         error: None,
                     };
 
-                    let resp = self.exec.senrec(OutgoingMessage::ListModulesResponse(list_resp)).expect("Failed to send/receive data");
+                    let _resp = self.exec.senrec(OutgoingMessage::ListModulesResponse(list_resp)).expect("Failed to send/receive data");
 
                 },
                 IncomingMessage::Log(_) => todo!(),
@@ -145,10 +145,6 @@ impl EvaluatorManager {
         // send the any required list_moduels response
         // send any read_module_response
         // send the close evaluator
-    }
-
-    pub fn create_evaluator(&self, none: Option<()>) -> i64 {
-        todo!()
     }
 }
 
@@ -170,7 +166,7 @@ impl Drop for EvaluatorManager {
 #[cfg(test)]
 mod tests {
     use pkl_derive::Pkl;
-    use crate::evaluator::decoder::Pkl;
+    use crate::evaluator::{decoder::Pkl, module_source::file_source};
 
     use super::*;
 
@@ -195,7 +191,7 @@ mod tests {
         let evaluator = eval.new_evaluator(None).expect("Failed to create a new evaluator");
 
         //TODO remove my paths
-        let test: Test = eval.evaluate_module::<Test>("file:///home/stormblessed/Code/pkl-rust/pkl-bind/src/evaluator/tests/test.pkl".into(), evaluator).expect("Failed to obtain result");
+        let test: Test = eval.evaluate_module::<Test>(file_source("src/evaluator/tests/test.pkl".into()).uri().to_string(), evaluator).expect("Failed to obtain result");
 
         assert_eq!(test.foo, 1);
         assert_eq!(test.bar, 2);

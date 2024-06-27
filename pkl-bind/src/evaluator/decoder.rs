@@ -1,4 +1,3 @@
-
 /// Derive trait for unmarshalling data from the PKL
 /// binary format as described
 /// [here](https://pkl-lang.org/main/current/bindings-specification/binary-encoding.html).
