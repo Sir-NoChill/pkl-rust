@@ -1,7 +1,4 @@
-
 use std::path::PathBuf;
-
-use serde::Deserialize;
 
 use crate::evaluator::decoder::Pkl;
 
@@ -28,7 +25,7 @@ impl EvaluatorManager {
         todo!()
     }
 
-     fn new_evaluator(&mut self, options: Option<EvaluatorOptions>) -> Result<i64, &'static str> {
+    pub fn new_evaluator(&mut self, options: Option<EvaluatorOptions>) -> Result<i64, &'static str> {
         let opts = match options {
             None => Default::default(),
             Some(x) => x,
@@ -77,7 +74,7 @@ impl EvaluatorManager {
         todo!()
     }
 
-    fn evaluate_module<T>(&mut self, file: String, id_number: i64) -> Result<T, &'static str> where T: Pkl + std::fmt::Debug {
+    pub fn evaluate_module<T>(&mut self, file: String, id_number: i64) -> Result<T, &'static str> where T: Pkl + std::fmt::Debug {
         // send the evaluate request
         let eval_req = Evaluate {
             request_id: rand::random::<i64>(),
@@ -149,6 +146,10 @@ impl EvaluatorManager {
         // send any read_module_response
         // send the close evaluator
     }
+
+    pub fn create_evaluator(&self, none: Option<()>) -> i64 {
+        todo!()
+    }
 }
 
 impl Drop for EvaluatorManager {
@@ -170,7 +171,6 @@ impl Drop for EvaluatorManager {
 mod tests {
     use pkl_derive::Pkl;
     use crate::evaluator::decoder::Pkl;
-    use serde::Deserialize;
 
     use super::*;
 
@@ -194,6 +194,7 @@ mod tests {
 
         let evaluator = eval.new_evaluator(None).expect("Failed to create a new evaluator");
 
+        //TODO remove my paths
         let test: Test = eval.evaluate_module::<Test>("file:///home/stormblessed/Code/pkl-rust/pkl-bind/src/evaluator/tests/test.pkl".into(), evaluator).expect("Failed to obtain result");
 
         assert_eq!(test.foo, 1);

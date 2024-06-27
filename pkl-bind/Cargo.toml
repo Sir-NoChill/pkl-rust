@@ -12,7 +12,7 @@ description = "Configuration as Code"
 license = "MIT"
 
 [dependencies]
-pkl-derive = { path = "../pkl-derive", optional = true }
+pkl-derive = { path = "../pkl-derive", version = "0.0.0", optional = true }
 
 dirs = "5.0.1"
 quote = "1.0.36"
