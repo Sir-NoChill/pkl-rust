@@ -1,7 +1,13 @@
 [package]
 name = "pkl-derive"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
+homepage = "https://pkl-lang.org"
+readme = "README.md"
+keywords = ["configuration", "codegen"]
+categories = ["config"]
+description = "Derive macros for the Pkl-bind crate"
+license-file = "LICENSE.txt"
 
 [dependencies]
 quote = { workspace = true, features = ["proc-macro"] }
