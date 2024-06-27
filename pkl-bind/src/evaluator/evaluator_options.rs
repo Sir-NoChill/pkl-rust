@@ -18,7 +18,7 @@ pub struct EvaluatorOptions {
     pub cache_dir: PathBuf,
     pub root_dir: String, //TODO this should also be a path
     pub project_dir: String, //TODO this should be a path
-    pub declared_project_dependency: ProjectDependencies
+    pub declared_project_dependency: ProjectDependencies,
 }
 
 macro_rules! vec_of_strings {
@@ -61,20 +61,20 @@ impl Default for EvaluatorOptions {
 }
 
 #[derive(Default)]
-struct ProjectRemoteDependency {
+pub struct ProjectRemoteDependency {
     package_uri: String, // TODO this should be a path
     checksums: String, //TODO should this be unified with the msg_api::Checksums type?
 }
 
 #[derive(Default)]
-struct ProjectLocalDependency {
+pub struct ProjectLocalDependency {
     package_uri: String,
     project_file_uri: String,
     dependencies: ProjectDependencies
 }
 
 #[derive(Default)]
-struct ProjectDependencies {
+pub struct ProjectDependencies {
     local_dependencies: HashMap<String, ProjectLocalDependency>,
     remote_dependencies: HashMap<String, ProjectRemoteDependency>,
 }
